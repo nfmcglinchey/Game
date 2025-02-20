@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Mario II x Mega Man (No-Server Demo)</title>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.js"></script>
+    <style>
+      body {
+        margin: 0; 
+        padding: 0;
+        background: #000; 
+      }
+      #game-container {
+        width: 800px;
+        height: 450px;
+        margin: 0 auto;
+        display: block;
+        border: 2px solid #444;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="game-container"></div>
+
+    <script>
+      // Use a 1x1 white pixel (ideal for tinting)
+      const WHITE_PIXEL_BASE64 =
+        'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwUB/CHPLmYAAAAASUVORK5CYII=';
+
+      const config = {
+        type: Phaser.AUTO,
+        width: 800,
+        height: 450,
+        parent: 'game-container',
+        physics: {
+          default: 'arcade',
+          arcade: {
+            gravity: { y: 600 },
+            debug: false
+          }
+        },
+        scene: {
+          preload: preload,
+          create: create,
+          update: update
+        }
+      };
+
+      let player;
+      let cursors;
+      let music;
+      let platforms;
+
+      const game = new Phaser.Game(config);
+
+      function preload() {
+        // 1) Load our 1x1 white pixel for all graphics
+        this.load.image('pixel', WHITE_PIXEL_BASE64);
+
+        // 2) Load your local MP3.
+        this.load.audio('theme', ['theme_song.mp3']);
+      }
+
+      function create() {
+        // --- BACKGROUND ---
+        // Scale the white pixel to fill 800x450, then tint to dark blue.
+        const bg = this.add.image(0, 0, 'pixel')
+          .setOrigin(0, 0)
+          .setScale(800, 450);
+        bg.setTint(0x000033);
+
+        // --- MUSIC ---
+        // Create the theme music but do not play immediately.
+        music = this.sound.add('theme', { loop: true, volume: 0.5 });
+        // Require a click/tap to start audio (Chrome needs a user gesture).
+        this.input.once('pointerdown', () => {
+          music.play();
+        });
+
+        // --- PLATFORMS (static) ---
+        platforms = this.physics.add.staticGroup();
+
+        // Ground platform (full width, near bottom)
+        const ground = platforms.create(400, 440, 'pixel');
+        ground.setScale(800, 20).refreshBody();
+        ground.setTint(0x444444); // Grayish tint
+
+        // Floating platforms
+        const plat1 = platforms.create(200, 300, 'pixel');
+        plat1.setScale(100, 10).refreshBody();
+        plat1.setTint(0x666666);
+
+        const plat2 = platforms.create(600, 200, 'pixel');
+        plat2.setScale(100, 10).refreshBody();
+        plat2.setTint(0x666666);
+
+        // --- PLAYER (dynamic) ---
+        player = this.physics.add.sprite(100, 100, 'pixel');
+        player.setDisplaySize(32, 48);
+        player.setCollideWorldBounds(true);
+        player.setBounce(0.1);
+
+        // Collisions between player and platforms
+        this.physics.add.collider(player, platforms);
+
+        // Keyboard input
+        cursors = this.input.keyboard.createCursorKeys();
+
+        // Debug text to confirm scene is loaded
+        this.add.text(20, 20, 'Click to start audio. Use arrow keys to move/jump.', { 
+          font: '16px Arial', 
+          fill: '#ffffff' 
+        });
+      }
+
+      function update() {
+        // Horizontal movement
+        if (cursors.left.isDown) {
+          player.setVelocityX(-160);
+          player.setTint(0xff0000); // red tint when moving left
+        } else if (cursors.right.isDown) {
+          player.setVelocityX(160);
+          player.setTint(0x0000ff); // blue tint when moving right
+        } else {
+          player.setVelocityX(0);
+          player.setTint(0xffffff); // white tint when idle
+        }
+
+        // Jump if on a platform
+        if (cursors.up.isDown && player.body.touching.down) {
+          player.setVelocityY(-350);
+        }
+      }
+    </script>
+  </body>
+</html>

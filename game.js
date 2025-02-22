@@ -121,8 +121,11 @@ class ForestLevel extends Phaser.Scene {
     moveEntity(this.player, this.cursors);
   }
   hitEnemy(player, enemy) {
-    if (player.body.blocked.down && enemy.body.touching.up) {
+    // If player is falling (positive y velocity) and above the enemy, kill the enemy
+    if (player.body.velocity.y > 0 && player.y < enemy.y) {
       enemy.disableBody(true, true);
+      // Optionally, bounce the player upward slightly after killing the enemy
+      player.setVelocityY(-200);
     } else if (!this.gameOverTriggered) {
       this.gameOverTriggered = true;
       this.scene.start('GameOver');

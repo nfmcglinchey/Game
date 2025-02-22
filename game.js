@@ -121,10 +121,10 @@ class ForestLevel extends Phaser.Scene {
     moveEntity(this.player, this.cursors);
   }
   hitEnemy(player, enemy) {
-    // If player is falling (positive y velocity) and above the enemy, kill the enemy
-    if (player.body.velocity.y > 0 && player.y < enemy.y) {
+    // Only disable the enemy if the player's bottom is touching the enemy's top
+    if (player.body.touching.down && enemy.body.touching.up) {
       enemy.disableBody(true, true);
-      // Optionally, bounce the player upward slightly after killing the enemy
+      // Bounce the player upward slightly
       player.setVelocityY(-200);
     } else if (!this.gameOverTriggered) {
       this.gameOverTriggered = true;
@@ -250,7 +250,7 @@ class CityLevel extends Phaser.Scene {
     } else {
       moveEntity(this.player, this.cursors);
     }
-    // When near the bike, disable the player's body to prevent glitching and mount the bike
+    // When near the bike, disable the player's body and mount the bike
     if (!this.isOnBike && Phaser.Math.Distance.Between(this.player.x, this.player.y, this.bike.x, this.bike.y) < 50) {
       this.isOnBike = true;
       this.player.disableBody(true, true);

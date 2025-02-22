@@ -1,4 +1,4 @@
-// Make sure all scene classes are defined before the config
+// We'll define our scene classes first, then create the Phaser config.
 
 // Global variables (optional to keep them here)
 let player, enemies, platforms, bike, cursors, camera;
@@ -9,11 +9,11 @@ class MainMenu extends Phaser.Scene {
   constructor() {
     super('MainMenu');
   }
-  create() {
-    // Black background rectangle
-    this.add.rectangle(400, 300, 1600, 600, 0x000000);
 
-    // Changed text color to white so it’s visible on a dark background
+  create() {
+    // Black background
+    this.add.rectangle(400, 300, 1600, 600, 0x000000);
+    // White text to contrast the background
     this.add.text(400, 300, 'Start Game', { fontSize: '32px', color: '#fff' }).setOrigin(0.5);
 
     // Click or tap to start
@@ -26,8 +26,9 @@ class LevelSelect extends Phaser.Scene {
   constructor() {
     super('LevelSelect');
   }
+
   create() {
-    // Simple background
+    // Simple gray background
     this.add.rectangle(400, 300, 1600, 600, 0x999999);
 
     this.add.text(400, 200, 'Level 1: Forest', { fontSize: '24px', color: '#000' }).setOrigin(0.5);
@@ -51,12 +52,14 @@ class ForestLevel extends Phaser.Scene {
   constructor() {
     super('ForestLevel');
   }
+
   preload() {
     this.load.image('player', 'assets/player.png');
     this.load.image('enemy', 'assets/enemy.png');
     this.load.image('platform', 'assets/platform.png');
-    this.load.image('door', 'assets/door.png'); // Make sure we load the door here
+    this.load.image('door', 'assets/door.png');
   }
+
   create() {
     // Background
     this.add.rectangle(400, 300, 1600, 600, 0x228B22); // Forest green
@@ -80,6 +83,8 @@ class ForestLevel extends Phaser.Scene {
     enemy1.setBounce(1);
     enemy1.setCollideWorldBounds(true);
     this.physics.add.collider(enemies, platforms);
+
+    // Overlap with a callback that triggers game over
     this.physics.add.overlap(player, enemies, this.hitEnemy, null, this);
 
     // Camera
@@ -90,13 +95,19 @@ class ForestLevel extends Phaser.Scene {
     // Input
     cursors = this.input.keyboard.createCursorKeys();
 
-    // Level completion (exit door)
+    // Door for next level
     let exit = this.physics.add.sprite(1500, 500, 'door');
     this.physics.add.overlap(player, exit, this.nextLevel, null, this);
+
+    // Flag to prevent repeated triggers
+    this.gameOverTriggered = false;
+    this.nextLevelTriggered = false;
   }
+
   update() {
     this.movePlayer();
   }
+
   movePlayer() {
     if (cursors.left.isDown) {
       player.setVelocityX(-160);
@@ -109,16 +120,26 @@ class ForestLevel extends Phaser.Scene {
       player.setVelocityY(-330);
     }
   }
+
   hitEnemy(player, enemy) {
-    // If we jump on enemy
     if (player.body.touching.down && enemy.body.touching.up) {
+      // Jumped on enemy
       enemy.disableBody(true, true);
     } else {
-      this.scene.start('GameOver');
+      // Player got hit from side or top
+      if (!this.gameOverTriggered) {
+        this.gameOverTriggered = true;
+        this.scene.start('GameOver');
+      }
     }
   }
+
   nextLevel() {
-    this.scene.start('DungeonLevel');
+    // Only move to the next level once
+    if (!this.nextLevelTriggered) {
+      this.nextLevelTriggered = true;
+      this.scene.start('DungeonLevel');
+    }
   }
 }
 
@@ -127,12 +148,14 @@ class DungeonLevel extends Phaser.Scene {
   constructor() {
     super('DungeonLevel');
   }
+
   preload() {
     this.load.image('player', 'assets/player.png');
     this.load.image('platform', 'assets/platform.png');
     this.load.image('key', 'assets/key.png');
     this.load.image('door', 'assets/door.png');
   }
+
   create() {
     // Background
     this.add.rectangle(400, 300, 1600, 600, 0x4B0082); // Dark purple
@@ -165,10 +188,15 @@ class DungeonLevel extends Phaser.Scene {
 
     // Input
     cursors = this.input.keyboard.createCursorKeys();
+
+    // Flags
+    this.nextLevelTriggered = false;
   }
+
   update() {
     this.movePlayer();
   }
+
   movePlayer() {
     if (cursors.left.isDown) {
       player.setVelocityX(-160);
@@ -181,12 +209,16 @@ class DungeonLevel extends Phaser.Scene {
       player.setVelocityY(-330);
     }
   }
+
   collectKey(player, dungeonKey) {
     dungeonKey.disableBody(true, true);
     hasKey = true;
   }
+
   openDoor(player, door) {
-    if (hasKey) {
+    // Only transition if we have the key and haven't already triggered
+    if (hasKey && !this.nextLevelTriggered) {
+      this.nextLevelTriggered = true;
       door.disableBody(true, true);
       this.scene.start('CityLevel');
     }
@@ -198,12 +230,14 @@ class CityLevel extends Phaser.Scene {
   constructor() {
     super('CityLevel');
   }
+
   preload() {
     this.load.image('player', 'assets/player.png');
     this.load.image('platform', 'assets/platform.png');
     this.load.image('boss', 'assets/boss.png');
     this.load.image('bike', 'assets/bike.png');
   }
+
   create() {
     // Background
     this.add.rectangle(400, 300, 1600, 600, 0x808080); // Gray
@@ -237,7 +271,11 @@ class CityLevel extends Phaser.Scene {
 
     // Input
     cursors = this.input.keyboard.createCursorKeys();
+
+    // Flags
+    this.bossDefeated = false;
   }
+
   update() {
     if (isOnBike) {
       // Bike controls
@@ -265,6 +303,7 @@ class CityLevel extends Phaser.Scene {
       bike.setPosition(player.x, player.y);
     }
   }
+
   movePlayer() {
     if (cursors.left.isDown) {
       player.setVelocityX(-160);
@@ -277,11 +316,15 @@ class CityLevel extends Phaser.Scene {
       player.setVelocityY(-330);
     }
   }
+
   hitBoss(player, boss) {
-    // Defeat boss
-    boss.disableBody(true, true);
-    this.add.text(400, 300, 'You Win!', { fontSize: '48px', color: '#000' }).setOrigin(0.5);
-    this.time.delayedCall(2000, () => this.scene.start('MainMenu'));
+    // Only defeat the boss once
+    if (!this.bossDefeated) {
+      this.bossDefeated = true;
+      boss.disableBody(true, true);
+      this.add.text(400, 300, 'You Win!', { fontSize: '48px', color: '#000' }).setOrigin(0.5);
+      this.time.delayedCall(2000, () => this.scene.start('MainMenu'));
+    }
   }
 }
 
@@ -290,14 +333,17 @@ class GameOver extends Phaser.Scene {
   constructor() {
     super('GameOver');
   }
+
   create() {
     this.add.rectangle(400, 300, 1600, 600, 0x000000);
     this.add.text(400, 300, 'Game Over', { fontSize: '32px', color: '#fff' }).setOrigin(0.5);
+
+    // Click or tap to return to main menu
     this.input.on('pointerdown', () => this.scene.start('MainMenu'));
   }
 }
 
-// Finally, the config and Phaser game instance
+// Now define the config and create the Phaser game
 const config = {
   type: Phaser.AUTO,
   width: 800,

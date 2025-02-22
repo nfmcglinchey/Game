@@ -1,21 +1,21 @@
 {
-    "name": "Retro Side-Scroller",
-    "short_name": "Scroller",
-    "description": "A retro side-scrolling game with multiple levels",
-    "start_url": "/index.html",
-    "display": "standalone",
-    "background_color": "#87ceeb",
-    "theme_color": "#000000",
-    "icons": [
-        {
-            "src": "assets/icons/icon-192.png",
-            "sizes": "192x192",
-            "type": "image/png"
-        },
-        {
-            "src": "assets/icons/icon-512.png",
-            "sizes": "512x512",
-            "type": "image/png"
-        }
-    ]
+  "name": "Retro Side-Scroller",
+  "short_name": "Scroller",
+  "description": "A retro side-scrolling game with multiple levels",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#87ceeb",
+  "theme_color": "#000000",
+  "icons": [
+    {
+      "src": "assets/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "assets/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
 }

@@ -10,6 +10,7 @@ function moveEntity(entity, cursors, jumpVelocity = -330, speed = 160) {
   } else {
     entity.setVelocityX(0);
   }
+  // Allow jump only if on ground
   if (cursors.up.isDown && entity.body.blocked.down) {
     entity.setVelocityY(jumpVelocity);
   }
@@ -30,9 +31,7 @@ class Boot extends Phaser.Scene {
       { key: 'boss', path: 'assets/boss.png' },
       { key: 'bike', path: 'assets/bike.png' }
     ];
-    assets.forEach(asset => {
-      this.load.image(asset.key, asset.path);
-    });
+    assets.forEach(asset => this.load.image(asset.key, asset.path));
   }
   create() {
     this.scene.start('MainMenu');
@@ -45,8 +44,8 @@ class MainMenu extends Phaser.Scene {
     super('MainMenu');
   }
   create() {
-    this.add.rectangle(GAME_WIDTH/2, GAME_HEIGHT/2, GAME_WIDTH * 2, GAME_HEIGHT, 0x000000);
-    this.add.text(GAME_WIDTH/2, GAME_HEIGHT/2, 'Start Game', { fontSize: '32px', color: '#fff' }).setOrigin(0.5);
+    this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH * 2, GAME_HEIGHT, 0x000000);
+    this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'Start Game', { fontSize: '32px', color: '#fff' }).setOrigin(0.5);
     this.input.on('pointerdown', () => this.scene.start('LevelSelect'));
   }
 }
@@ -57,10 +56,10 @@ class LevelSelect extends Phaser.Scene {
     super('LevelSelect');
   }
   create() {
-    this.add.rectangle(GAME_WIDTH/2, GAME_HEIGHT/2, GAME_WIDTH * 2, GAME_HEIGHT, 0x999999);
-    this.add.text(GAME_WIDTH/2, 150, 'Level 1: Forest', { fontSize: '24px', color: '#000' }).setOrigin(0.5);
-    this.add.text(GAME_WIDTH/2, 250, 'Level 2: Dungeon', { fontSize: '24px', color: '#000' }).setOrigin(0.5);
-    this.add.text(GAME_WIDTH/2, 350, 'Level 3: City', { fontSize: '24px', color: '#000' }).setOrigin(0.5);
+    this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH * 2, GAME_HEIGHT, 0x999999);
+    this.add.text(GAME_WIDTH / 2, 150, 'Level 1: Forest', { fontSize: '24px', color: '#000' }).setOrigin(0.5);
+    this.add.text(GAME_WIDTH / 2, 250, 'Level 2: Dungeon', { fontSize: '24px', color: '#000' }).setOrigin(0.5);
+    this.add.text(GAME_WIDTH / 2, 350, 'Level 3: City', { fontSize: '24px', color: '#000' }).setOrigin(0.5);
     this.input.on('pointerdown', (pointer) => {
       if (pointer.y < 200) this.scene.start('ForestLevel');
       else if (pointer.y < 300) this.scene.start('DungeonLevel');
@@ -75,11 +74,16 @@ class ForestLevel extends Phaser.Scene {
     super('ForestLevel');
   }
   create() {
+    // Prevent rapid retriggers
     this.gameOverTriggered = false;
     this.nextLevelTriggered = false;
-    this.add.rectangle(GAME_WIDTH/2, GAME_HEIGHT/2, GAME_WIDTH * 2, GAME_HEIGHT, 0x228B22);
+
+    // Background
+    this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH * 2, GAME_HEIGHT, 0x228B22);
+
+    // Platforms
     this.platforms = this.physics.add.staticGroup();
-    this.platforms.create(GAME_WIDTH/2, 568, 'platform').setScale(2).refreshBody();
+    this.platforms.create(GAME_WIDTH / 2, 568, 'platform').setScale(2).refreshBody();
     this.platforms.create(600, 400, 'platform');
     this.platforms.create(50, 250, 'platform');
 
@@ -98,11 +102,12 @@ class ForestLevel extends Phaser.Scene {
     this.physics.add.collider(this.enemies, this.platforms);
     this.physics.add.overlap(this.player, this.enemies, this.hitEnemy, null, this);
 
+    // Camera and Input
     this.cameras.main.setBounds(0, 0, GAME_WIDTH * 2, GAME_HEIGHT);
     this.cameras.main.startFollow(this.player);
     this.cursors = this.input.keyboard.createCursorKeys();
 
-    // Exit door
+    // Exit door to next level
     let exit = this.physics.add.sprite(1500, 500, 'door');
     this.physics.add.overlap(this.player, exit, this.nextLevel, null, this);
   }
@@ -110,7 +115,7 @@ class ForestLevel extends Phaser.Scene {
     moveEntity(this.player, this.cursors);
   }
   hitEnemy(player, enemy) {
-    // Only allow a stomp if the player is falling and is above the enemy
+    // Allow "stomp" only if falling and above the enemy
     if (player.body.velocity.y > 0 && player.y < enemy.y) {
       enemy.disableBody(true, true);
       player.setVelocityY(-200);
@@ -134,9 +139,9 @@ class DungeonLevel extends Phaser.Scene {
   }
   create() {
     this.nextLevelTriggered = false;
-    this.add.rectangle(GAME_WIDTH/2, GAME_HEIGHT/2, GAME_WIDTH * 2, GAME_HEIGHT, 0x4B0082);
+    this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH * 2, GAME_HEIGHT, 0x4B0082);
     this.platforms = this.physics.add.staticGroup();
-    this.platforms.create(GAME_WIDTH/2, 568, 'platform').setScale(2).refreshBody();
+    this.platforms.create(GAME_WIDTH / 2, 568, 'platform').setScale(2).refreshBody();
     this.platforms.create(200, 400, 'platform');
     this.platforms.create(600, 300, 'platform');
 
@@ -146,7 +151,7 @@ class DungeonLevel extends Phaser.Scene {
     this.player.setCollideWorldBounds(true);
     this.physics.add.collider(this.player, this.platforms);
 
-    // Key
+    // Key pickup
     this.hasKey = false;
     let dungeonKey = this.physics.add.sprite(500, 250, 'key');
     this.physics.add.overlap(this.player, dungeonKey, () => {
@@ -154,7 +159,7 @@ class DungeonLevel extends Phaser.Scene {
       this.hasKey = true;
     }, null, this);
 
-    // Door
+    // Door to City Level
     let door = this.physics.add.sprite(1500, 500, 'door');
     door.setImmovable(true);
     this.physics.add.collider(this.player, door, () => {
@@ -180,9 +185,9 @@ class CityLevel extends Phaser.Scene {
     super('CityLevel');
   }
   create() {
-    this.add.rectangle(GAME_WIDTH/2, GAME_HEIGHT/2, GAME_WIDTH * 2, GAME_HEIGHT, 0x808080);
+    this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH * 2, GAME_HEIGHT, 0x808080);
     this.platforms = this.physics.add.staticGroup();
-    this.platforms.create(GAME_WIDTH/2, 568, 'platform').setScale(2).refreshBody();
+    this.platforms.create(GAME_WIDTH / 2, 568, 'platform').setScale(2).refreshBody();
     this.platforms.create(800, 400, 'platform');
     this.platforms.create(1200, 300, 'platform');
 
@@ -192,19 +197,19 @@ class CityLevel extends Phaser.Scene {
     this.player.setCollideWorldBounds(true);
     this.physics.add.collider(this.player, this.platforms);
 
-    // Boss
+    // Boss fight – win condition
     let boss = this.physics.add.sprite(1400, 500, 'boss');
     boss.setImmovable(true);
     this.physics.add.overlap(this.player, boss, () => {
       if (!this.bossDefeated) {
         this.bossDefeated = true;
         boss.disableBody(true, true);
-        this.add.text(GAME_WIDTH/2, GAME_HEIGHT/2, 'You Win!', { fontSize: '48px', color: '#000' }).setOrigin(0.5);
+        this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'You Win!', { fontSize: '48px', color: '#000' }).setOrigin(0.5);
         this.time.delayedCall(2000, () => this.scene.start('MainMenu'));
       }
     }, null, this);
 
-    // Bike setup
+    // Bike bonus: mount it if you get close
     this.bike = this.physics.add.sprite(1000, 500, 'bike');
     this.bike.setVisible(false);
     this.physics.add.collider(this.bike, this.platforms);
@@ -216,20 +221,15 @@ class CityLevel extends Phaser.Scene {
   }
   update() {
     if (this.isOnBike) {
-      if (this.cursors.left.isDown) {
-        this.bike.setVelocityX(-300);
-      } else if (this.cursors.right.isDown) {
-        this.bike.setVelocityX(300);
-      } else {
-        this.bike.setVelocityX(0);
-      }
-      if (this.cursors.up.isDown && this.bike.body.blocked.down) {
-        this.bike.setVelocityY(-400);
-      }
+      if (this.cursors.left.isDown) this.bike.setVelocityX(-300);
+      else if (this.cursors.right.isDown) this.bike.setVelocityX(300);
+      else this.bike.setVelocityX(0);
+      if (this.cursors.up.isDown && this.bike.body.blocked.down) this.bike.setVelocityY(-400);
       this.cameras.main.startFollow(this.bike);
     } else {
       moveEntity(this.player, this.cursors);
     }
+    // Automatically mount the bike if near enough
     if (!this.isOnBike && Phaser.Math.Distance.Between(this.player.x, this.player.y, this.bike.x, this.bike.y) < 50) {
       this.isOnBike = true;
       this.player.disableBody(true, true);
@@ -246,13 +246,13 @@ class GameOver extends Phaser.Scene {
     super('GameOver');
   }
   create() {
-    this.add.rectangle(GAME_WIDTH/2, GAME_HEIGHT/2, GAME_WIDTH * 2, GAME_HEIGHT, 0x000000);
-    this.add.text(GAME_WIDTH/2, GAME_HEIGHT/2, 'Game Over', { fontSize: '32px', color: '#fff' }).setOrigin(0.5);
+    this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH * 2, GAME_HEIGHT, 0x000000);
+    this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'Game Over', { fontSize: '32px', color: '#fff' }).setOrigin(0.5);
     this.input.on('pointerdown', () => this.scene.start('MainMenu'));
   }
 }
 
-// Game config and initialization
+// Game configuration and initialization
 const config = {
   type: Phaser.AUTO,
   width: GAME_WIDTH,

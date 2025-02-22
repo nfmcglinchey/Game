@@ -247,11 +247,13 @@ class CityLevel extends Phaser.Scene {
     } else {
       moveEntity(this.player, this.cursors);
     }
+    // When near the bike, disable the player's body to prevent glitching and mount the bike
     if (!this.isOnBike && Phaser.Math.Distance.Between(this.player.x, this.player.y, this.bike.x, this.bike.y) < 50) {
       this.isOnBike = true;
-      this.player.setVisible(false);
+      this.player.disableBody(true, true);
       this.bike.setVisible(true);
       this.bike.setPosition(this.player.x, this.player.y);
+      this.cameras.main.startFollow(this.bike);
     }
   }
 }

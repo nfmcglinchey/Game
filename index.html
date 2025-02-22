@@ -4,13 +4,11 @@
   <meta charset="UTF-8">
   <title>Retro Side-Scroller</title>
   <link rel="manifest" href="manifest.json">
-  <!-- Phaser first -->
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
-  <!-- Then our game code -->
   <script src="game.js"></script>
-  <!-- Register the service worker with a relative path (no leading slash) -->
   <script>
     if ('serviceWorker' in navigator) {
+      // Use a relative path so it looks for sw.js at https://username.github.io/Game/sw.js
       navigator.serviceWorker.register('sw.js')
         .then(reg => console.log('Service Worker registered:', reg.scope))
         .catch(err => console.log('Service Worker failed:', err));
@@ -24,31 +22,6 @@
       align-items: center;
       height: 100vh;
     }
-  </style>
-</head>
-<body>
-  <div id="game-container"></div>
-</body>
-</html>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Retro Side-Scroller</title>
-  <link rel="manifest" href="manifest.json">
-  <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
-  <!-- Make sure game.js is after Phaser but before the service worker registration -->
-  <script src="game.js"></script>
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js') // relative path, no leading slash
-        .then(reg => console.log('Service Worker registered:', reg.scope))
-        .catch(err => console.log('Service Worker failed:', err));
-    }
-  </script>
-  <style>
-    body { margin: 0; padding: 0; overflow: hidden; }
-    #game-container { display: flex; justify-content: center; align-items: center; height: 100vh; }
   </style>
 </head>
 <body>

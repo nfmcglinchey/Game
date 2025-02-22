@@ -1,5 +1,3 @@
-// Improved game.js
-
 const GAME_WIDTH = 800;
 const GAME_HEIGHT = 600;
 
@@ -121,8 +119,8 @@ class ForestLevel extends Phaser.Scene {
     moveEntity(this.player, this.cursors);
   }
   hitEnemy(player, enemy) {
-    // Only disable the enemy if the player's bottom is touching the enemy's top
-    if (player.body.touching.down && enemy.body.touching.up) {
+    // Check if player is falling and is positioned above the enemy
+    if (player.body.velocity.y > 0 && player.y < enemy.y) {
       enemy.disableBody(true, true);
       // Bounce the player upward slightly
       player.setVelocityY(-200);

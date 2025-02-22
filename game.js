@@ -10,7 +10,6 @@ function moveEntity(entity, cursors, jumpVelocity = -330, speed = 160) {
   } else {
     entity.setVelocityX(0);
   }
-  // Use blocked.down to check if the entity is on the ground
   if (cursors.up.isDown && entity.body.blocked.down) {
     entity.setVelocityY(jumpVelocity);
   }
@@ -76,14 +75,9 @@ class ForestLevel extends Phaser.Scene {
     super('ForestLevel');
   }
   create() {
-    // Reset scene-specific variables
     this.gameOverTriggered = false;
     this.nextLevelTriggered = false;
-
-    // Background
     this.add.rectangle(GAME_WIDTH/2, GAME_HEIGHT/2, GAME_WIDTH * 2, GAME_HEIGHT, 0x228B22);
-
-    // Platforms
     this.platforms = this.physics.add.staticGroup();
     this.platforms.create(GAME_WIDTH/2, 568, 'platform').setScale(2).refreshBody();
     this.platforms.create(600, 400, 'platform');
@@ -104,11 +98,8 @@ class ForestLevel extends Phaser.Scene {
     this.physics.add.collider(this.enemies, this.platforms);
     this.physics.add.overlap(this.player, this.enemies, this.hitEnemy, null, this);
 
-    // Camera
     this.cameras.main.setBounds(0, 0, GAME_WIDTH * 2, GAME_HEIGHT);
     this.cameras.main.startFollow(this.player);
-
-    // Input
     this.cursors = this.input.keyboard.createCursorKeys();
 
     // Exit door
@@ -119,10 +110,9 @@ class ForestLevel extends Phaser.Scene {
     moveEntity(this.player, this.cursors);
   }
   hitEnemy(player, enemy) {
-    // Check if player is falling and is positioned above the enemy
+    // Only allow a stomp if the player is falling and is above the enemy
     if (player.body.velocity.y > 0 && player.y < enemy.y) {
       enemy.disableBody(true, true);
-      // Bounce the player upward slightly
       player.setVelocityY(-200);
     } else if (!this.gameOverTriggered) {
       this.gameOverTriggered = true;
@@ -144,10 +134,7 @@ class DungeonLevel extends Phaser.Scene {
   }
   create() {
     this.nextLevelTriggered = false;
-    // Background
     this.add.rectangle(GAME_WIDTH/2, GAME_HEIGHT/2, GAME_WIDTH * 2, GAME_HEIGHT, 0x4B0082);
-
-    // Platforms
     this.platforms = this.physics.add.staticGroup();
     this.platforms.create(GAME_WIDTH/2, 568, 'platform').setScale(2).refreshBody();
     this.platforms.create(200, 400, 'platform');
@@ -178,7 +165,6 @@ class DungeonLevel extends Phaser.Scene {
       }
     }, null, this);
 
-    // Camera and input
     this.cameras.main.setBounds(0, 0, GAME_WIDTH * 2, GAME_HEIGHT);
     this.cameras.main.startFollow(this.player);
     this.cursors = this.input.keyboard.createCursorKeys();
@@ -194,10 +180,7 @@ class CityLevel extends Phaser.Scene {
     super('CityLevel');
   }
   create() {
-    // Background
     this.add.rectangle(GAME_WIDTH/2, GAME_HEIGHT/2, GAME_WIDTH * 2, GAME_HEIGHT, 0x808080);
-
-    // Platforms
     this.platforms = this.physics.add.staticGroup();
     this.platforms.create(GAME_WIDTH/2, 568, 'platform').setScale(2).refreshBody();
     this.platforms.create(800, 400, 'platform');
@@ -226,7 +209,6 @@ class CityLevel extends Phaser.Scene {
     this.bike.setVisible(false);
     this.physics.add.collider(this.bike, this.platforms);
 
-    // Camera and input
     this.cameras.main.setBounds(0, 0, GAME_WIDTH * 2, GAME_HEIGHT);
     this.cameras.main.startFollow(this.player);
     this.cursors = this.input.keyboard.createCursorKeys();
@@ -248,7 +230,6 @@ class CityLevel extends Phaser.Scene {
     } else {
       moveEntity(this.player, this.cursors);
     }
-    // When near the bike, disable the player's body and mount the bike
     if (!this.isOnBike && Phaser.Math.Distance.Between(this.player.x, this.player.y, this.bike.x, this.bike.y) < 50) {
       this.isOnBike = true;
       this.player.disableBody(true, true);

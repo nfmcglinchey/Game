@@ -76,6 +76,9 @@ class ForestLevel extends Phaser.Scene {
     this.gameOverTriggered = false;
     this.nextLevelTriggered = false;
 
+    // Set physics world bounds to match level size
+    this.physics.world.setBounds(0, 0, GAME_WIDTH * 2, GAME_HEIGHT);
+
     // Background
     this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH * 2, GAME_HEIGHT, 0x228B22);
 
@@ -87,7 +90,7 @@ class ForestLevel extends Phaser.Scene {
     this.platforms.create(600, 400, 'platform');
     this.platforms.create(50, 250, 'platform');
 
-    // Player setup
+    // Player
     this.player = this.physics.add.sprite(100, 450, 'player');
     this.player.setBounce(0.2);
     this.player.setCollideWorldBounds(true);
@@ -102,14 +105,17 @@ class ForestLevel extends Phaser.Scene {
     this.physics.add.collider(this.enemies, this.platforms);
     this.physics.add.overlap(this.player, this.enemies, this.hitEnemy, null, this);
 
+    // Door to next level
+    let exit = this.physics.add.sprite(1500, 550, 'door');
+    exit.setImmovable(true);
+    exit.body.allowGravity = false; // so it won't drop
+    this.physics.add.collider(exit, this.platforms);
+    this.physics.add.overlap(this.player, exit, this.nextLevel, null, this);
+
     // Camera and input
     this.cameras.main.setBounds(0, 0, GAME_WIDTH * 2, GAME_HEIGHT);
     this.cameras.main.startFollow(this.player);
     this.cursors = this.input.keyboard.createCursorKeys();
-
-    // Exit door to next level
-    let exit = this.physics.add.sprite(1500, 500, 'door');
-    this.physics.add.overlap(this.player, exit, this.nextLevel, null, this);
   }
   update() {
     moveEntity(this.player, this.cursors);
@@ -138,17 +144,25 @@ class DungeonLevel extends Phaser.Scene {
   }
   create() {
     this.nextLevelTriggered = false;
+    this.gameOverTriggered = false;
+
+    // Set physics world bounds to match level size
+    this.physics.world.setBounds(0, 0, GAME_WIDTH * 2, GAME_HEIGHT);
+
     this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH * 2, GAME_HEIGHT, 0x4B0082);
 
     // Ground platforms spanning full width
     this.platforms = this.physics.add.staticGroup();
     this.platforms.create(400, 568, 'platform').setScale(2).refreshBody();
     this.platforms.create(1200, 568, 'platform').setScale(2).refreshBody();
+
     // Additional platforms
     this.platforms.create(200, 400, 'platform');
     this.platforms.create(600, 300, 'platform');
+    // Extra platform for key access
+    this.platforms.create(400, 275, 'platform');
 
-    // Player setup
+    // Player
     this.player = this.physics.add.sprite(100, 450, 'player');
     this.player.setBounce(0.2);
     this.player.setCollideWorldBounds(true);
@@ -156,15 +170,28 @@ class DungeonLevel extends Phaser.Scene {
 
     // Key pickup
     this.hasKey = false;
-    let dungeonKey = this.physics.add.sprite(500, 250, 'key');
+    let dungeonKey = this.physics.add.sprite(500, 200, 'key');
+    dungeonKey.body.allowGravity = false; // won't fall
+    this.physics.add.collider(dungeonKey, this.platforms);
     this.physics.add.overlap(this.player, dungeonKey, () => {
       dungeonKey.disableBody(true, true);
       this.hasKey = true;
     }, null, this);
 
+    // Enemy in Dungeon
+    this.enemies = this.physics.add.group();
+    let enemy = this.enemies.create(300, 500, 'enemy');
+    enemy.setVelocityX(100);
+    enemy.setBounce(1);
+    enemy.setCollideWorldBounds(true);
+    this.physics.add.collider(this.enemies, this.platforms);
+    this.physics.add.overlap(this.player, this.enemies, this.hitEnemy, null, this);
+
     // Door to City Level
-    let door = this.physics.add.sprite(1500, 500, 'door');
+    let door = this.physics.add.sprite(1500, 550, 'door');
     door.setImmovable(true);
+    door.body.allowGravity = false;
+    this.physics.add.collider(door, this.platforms);
     this.physics.add.collider(this.player, door, () => {
       if (this.hasKey && !this.nextLevelTriggered) {
         this.nextLevelTriggered = true;
@@ -173,12 +200,22 @@ class DungeonLevel extends Phaser.Scene {
       }
     }, null, this);
 
+    // Camera and input
     this.cameras.main.setBounds(0, 0, GAME_WIDTH * 2, GAME_HEIGHT);
     this.cameras.main.startFollow(this.player);
     this.cursors = this.input.keyboard.createCursorKeys();
   }
   update() {
     moveEntity(this.player, this.cursors);
+  }
+  hitEnemy(player, enemy) {
+    if (player.body.velocity.y > 0 && player.y < enemy.y) {
+      enemy.disableBody(true, true);
+      player.setVelocityY(-200);
+    } else if (!this.gameOverTriggered) {
+      this.gameOverTriggered = true;
+      this.scene.start('GameOver');
+    }
   }
 }
 
@@ -188,6 +225,9 @@ class CityLevel extends Phaser.Scene {
     super('CityLevel');
   }
   create() {
+    // Set physics world bounds to match level size
+    this.physics.world.setBounds(0, 0, GAME_WIDTH * 2, GAME_HEIGHT);
+
     this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH * 2, GAME_HEIGHT, 0x808080);
 
     // Ground platforms spanning full width
@@ -198,27 +238,31 @@ class CityLevel extends Phaser.Scene {
     this.platforms.create(800, 400, 'platform');
     this.platforms.create(1200, 300, 'platform');
 
-    // Player setup
+    // Player
     this.player = this.physics.add.sprite(100, 450, 'player');
     this.player.setBounce(0.2);
     this.player.setCollideWorldBounds(true);
     this.physics.add.collider(this.player, this.platforms);
 
     // Boss fight – win condition
-    let boss = this.physics.add.sprite(1400, 500, 'boss');
+    let boss = this.physics.add.sprite(1400, 550, 'boss');
     boss.setImmovable(true);
+    boss.body.allowGravity = false; // won't drop
+    this.physics.add.collider(boss, this.platforms);
     this.physics.add.overlap(this.player, boss, () => {
       if (!this.bossDefeated) {
         this.bossDefeated = true;
         boss.disableBody(true, true);
         this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'You Win!', { fontSize: '48px', color: '#000' }).setOrigin(0.5);
+        // Return to main menu after 2 seconds
         this.time.delayedCall(2000, () => this.scene.start('MainMenu'));
       }
     }, null, this);
 
-    // Bike bonus: mount it if close enough
-    this.bike = this.physics.add.sprite(1000, 500, 'bike');
+    // Bike bonus: mount it if you get close
+    this.bike = this.physics.add.sprite(1000, 550, 'bike');
     this.bike.setVisible(false);
+    this.bike.body.allowGravity = false; // so it doesn't drop
     this.physics.add.collider(this.bike, this.platforms);
 
     this.cameras.main.setBounds(0, 0, GAME_WIDTH * 2, GAME_HEIGHT);
@@ -228,10 +272,16 @@ class CityLevel extends Phaser.Scene {
   }
   update() {
     if (this.isOnBike) {
-      if (this.cursors.left.isDown) this.bike.setVelocityX(-300);
-      else if (this.cursors.right.isDown) this.bike.setVelocityX(300);
-      else this.bike.setVelocityX(0);
-      if (this.cursors.up.isDown && this.bike.body.blocked.down) this.bike.setVelocityY(-400);
+      if (this.cursors.left.isDown) {
+        this.bike.setVelocityX(-300);
+      } else if (this.cursors.right.isDown) {
+        this.bike.setVelocityX(300);
+      } else {
+        this.bike.setVelocityX(0);
+      }
+      if (this.cursors.up.isDown && this.bike.body.blocked.down) {
+        this.bike.setVelocityY(-400);
+      }
       this.cameras.main.startFollow(this.bike);
     } else {
       moveEntity(this.player, this.cursors);

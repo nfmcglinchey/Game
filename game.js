@@ -28,7 +28,7 @@ class Boot extends Phaser.Scene {
       { key: 'platform', path: 'assets/platform.png' },
       { key: 'door',     path: 'assets/door.png' },
       { key: 'key',      path: 'assets/key.png' },
-      { key: 'boss',     path: 'assets/doc.png' },
+     // { key: 'boss',     path: 'assets/doc.png' },
       { key: 'bike',     path: 'assets/bike.png' }
     ];
     assets.forEach(asset => this.load.image(asset.key, asset.path));

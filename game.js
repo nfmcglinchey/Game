@@ -310,6 +310,7 @@ const config = {
   width: GAME_WIDTH,
   height: GAME_HEIGHT,
   parent: 'game-container',
+  pixelArt: true, // add this line
   physics: {
     default: 'arcade',
     arcade: {
@@ -321,3 +322,4 @@ const config = {
 };
 
 const game = new Phaser.Game(config);
+

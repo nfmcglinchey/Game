@@ -21,14 +21,15 @@ class Boot extends Phaser.Scene {
     super('Boot');
   }
   preload() {
+    // Use doc.png as your "boss" sprite
     const assets = [
-      { key: 'player', path: 'assets/player.png' },
-      { key: 'enemy', path: 'assets/enemy.png' },
+      { key: 'player',   path: 'assets/player.png' },
+      { key: 'enemy',    path: 'assets/enemy.png' },
       { key: 'platform', path: 'assets/platform.png' },
-      { key: 'door', path: 'assets/door.png' },
-      { key: 'key', path: 'assets/key.png' },
-      { key: 'boss', path: 'assets/boss.png' },
-      { key: 'bike', path: 'assets/bike.png' }
+      { key: 'door',     path: 'assets/door.png' },
+      { key: 'key',      path: 'assets/key.png' },
+      { key: 'boss',     path: 'assets/doc.png' },
+      { key: 'bike',     path: 'assets/bike.png' }
     ];
     assets.forEach(asset => this.load.image(asset.key, asset.path));
   }
@@ -59,6 +60,7 @@ class LevelSelect extends Phaser.Scene {
     this.add.text(GAME_WIDTH / 2, 150, 'Level 1: Forest', { fontSize: '24px', color: '#000' }).setOrigin(0.5);
     this.add.text(GAME_WIDTH / 2, 250, 'Level 2: Dungeon', { fontSize: '24px', color: '#000' }).setOrigin(0.5);
     this.add.text(GAME_WIDTH / 2, 350, 'Level 3: City', { fontSize: '24px', color: '#000' }).setOrigin(0.5);
+
     this.input.on('pointerdown', (pointer) => {
       if (pointer.y < 200) this.scene.start('ForestLevel');
       else if (pointer.y < 300) this.scene.start('DungeonLevel');
@@ -76,39 +78,36 @@ class ForestLevel extends Phaser.Scene {
     this.gameOverTriggered = false;
     this.nextLevelTriggered = false;
 
-    // Set physics world bounds to match level size
+    // Expand the physics bounds to 1600 x 600
     this.physics.world.setBounds(0, 0, GAME_WIDTH * 2, GAME_HEIGHT);
 
     // Background
     this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH * 2, GAME_HEIGHT, 0x228B22);
 
-    // Ground platforms spanning full width
+    // Ground
     this.platforms = this.physics.add.staticGroup();
     this.platforms.create(400, 568, 'platform').setScale(2).refreshBody();
     this.platforms.create(1200, 568, 'platform').setScale(2).refreshBody();
-    // Additional platforms
+    // Additional
     this.platforms.create(600, 400, 'platform');
     this.platforms.create(50, 250, 'platform');
 
     // Player
     this.player = this.physics.add.sprite(100, 450, 'player');
-    this.player.setBounce(0.2);
-    this.player.setCollideWorldBounds(true);
+    this.player.setBounce(0.2).setCollideWorldBounds(true);
     this.physics.add.collider(this.player, this.platforms);
 
-    // Enemies
+    // Enemy
     this.enemies = this.physics.add.group();
     let enemy = this.enemies.create(200, 500, 'enemy');
-    enemy.setVelocityX(100);
-    enemy.setBounce(1);
-    enemy.setCollideWorldBounds(true);
+    enemy.setVelocityX(100).setBounce(1).setCollideWorldBounds(true);
     this.physics.add.collider(this.enemies, this.platforms);
     this.physics.add.overlap(this.player, this.enemies, this.hitEnemy, null, this);
 
-    // Door to next level
+    // Door to Dungeon
     let exit = this.physics.add.sprite(1500, 550, 'door');
     exit.setImmovable(true);
-    exit.body.allowGravity = false; // so it won't drop
+    exit.body.allowGravity = false;
     this.physics.add.collider(exit, this.platforms);
     this.physics.add.overlap(this.player, exit, this.nextLevel, null, this);
 
@@ -121,6 +120,7 @@ class ForestLevel extends Phaser.Scene {
     moveEntity(this.player, this.cursors);
   }
   hitEnemy(player, enemy) {
+    // "Stomp" if falling
     if (player.body.velocity.y > 0 && player.y < enemy.y) {
       enemy.disableBody(true, true);
       player.setVelocityY(-200);
@@ -146,48 +146,45 @@ class DungeonLevel extends Phaser.Scene {
     this.nextLevelTriggered = false;
     this.gameOverTriggered = false;
 
-    // Set physics world bounds to match level size
+    // Expand the physics bounds to 1600 x 600
     this.physics.world.setBounds(0, 0, GAME_WIDTH * 2, GAME_HEIGHT);
 
     this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH * 2, GAME_HEIGHT, 0x4B0082);
 
-    // Ground platforms spanning full width
+    // Ground
     this.platforms = this.physics.add.staticGroup();
     this.platforms.create(400, 568, 'platform').setScale(2).refreshBody();
     this.platforms.create(1200, 568, 'platform').setScale(2).refreshBody();
 
-    // Additional platforms
+    // Additional
     this.platforms.create(200, 400, 'platform');
     this.platforms.create(600, 300, 'platform');
-    // Extra platform for key access
+    // Extra stepping platform
     this.platforms.create(400, 275, 'platform');
 
     // Player
     this.player = this.physics.add.sprite(100, 450, 'player');
-    this.player.setBounce(0.2);
-    this.player.setCollideWorldBounds(true);
+    this.player.setBounce(0.2).setCollideWorldBounds(true);
     this.physics.add.collider(this.player, this.platforms);
 
-    // Key pickup
+    // Key
     this.hasKey = false;
     let dungeonKey = this.physics.add.sprite(500, 200, 'key');
-    dungeonKey.body.allowGravity = false; // won't fall
+    dungeonKey.body.allowGravity = false;
     this.physics.add.collider(dungeonKey, this.platforms);
     this.physics.add.overlap(this.player, dungeonKey, () => {
       dungeonKey.disableBody(true, true);
       this.hasKey = true;
     }, null, this);
 
-    // Enemy in Dungeon
+    // Enemy
     this.enemies = this.physics.add.group();
     let enemy = this.enemies.create(300, 500, 'enemy');
-    enemy.setVelocityX(100);
-    enemy.setBounce(1);
-    enemy.setCollideWorldBounds(true);
+    enemy.setVelocityX(100).setBounce(1).setCollideWorldBounds(true);
     this.physics.add.collider(this.enemies, this.platforms);
     this.physics.add.overlap(this.player, this.enemies, this.hitEnemy, null, this);
 
-    // Door to City Level
+    // Door to City
     let door = this.physics.add.sprite(1500, 550, 'door');
     door.setImmovable(true);
     door.body.allowGravity = false;
@@ -225,44 +222,42 @@ class CityLevel extends Phaser.Scene {
     super('CityLevel');
   }
   create() {
-    // Set physics world bounds to match level size
+    // Expand the physics bounds to 1600 x 600
     this.physics.world.setBounds(0, 0, GAME_WIDTH * 2, GAME_HEIGHT);
 
     this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH * 2, GAME_HEIGHT, 0x808080);
 
-    // Ground platforms spanning full width
+    // Ground
     this.platforms = this.physics.add.staticGroup();
     this.platforms.create(400, 568, 'platform').setScale(2).refreshBody();
     this.platforms.create(1200, 568, 'platform').setScale(2).refreshBody();
-    // Additional platforms
+    // Additional
     this.platforms.create(800, 400, 'platform');
     this.platforms.create(1200, 300, 'platform');
 
     // Player
     this.player = this.physics.add.sprite(100, 450, 'player');
-    this.player.setBounce(0.2);
-    this.player.setCollideWorldBounds(true);
+    this.player.setBounce(0.2).setCollideWorldBounds(true);
     this.physics.add.collider(this.player, this.platforms);
 
-    // Boss fight – win condition
+    // Boss (doc.png)
     let boss = this.physics.add.sprite(1400, 550, 'boss');
     boss.setImmovable(true);
-    boss.body.allowGravity = false; // won't drop
+    boss.body.allowGravity = false;
     this.physics.add.collider(boss, this.platforms);
     this.physics.add.overlap(this.player, boss, () => {
       if (!this.bossDefeated) {
         this.bossDefeated = true;
         boss.disableBody(true, true);
         this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'You Win!', { fontSize: '48px', color: '#000' }).setOrigin(0.5);
-        // Return to main menu after 2 seconds
         this.time.delayedCall(2000, () => this.scene.start('MainMenu'));
       }
     }, null, this);
 
-    // Bike bonus: mount it if you get close
+    // Bike
     this.bike = this.physics.add.sprite(1000, 550, 'bike');
     this.bike.setVisible(false);
-    this.bike.body.allowGravity = false; // so it doesn't drop
+    this.bike.body.allowGravity = false;
     this.physics.add.collider(this.bike, this.platforms);
 
     this.cameras.main.setBounds(0, 0, GAME_WIDTH * 2, GAME_HEIGHT);
@@ -286,6 +281,7 @@ class CityLevel extends Phaser.Scene {
     } else {
       moveEntity(this.player, this.cursors);
     }
+    // Mount bike if close
     if (!this.isOnBike && Phaser.Math.Distance.Between(this.player.x, this.player.y, this.bike.x, this.bike.y) < 50) {
       this.isOnBike = true;
       this.player.disableBody(true, true);

@@ -99,7 +99,7 @@ class ForestLevel extends Phaser.Scene {
 
     // Enemy
     this.enemies = this.physics.add.group();
-    let enemy = this.enemies.create(200, 500, 'enemy');
+    let enemy = this.enemies.create(400, 500, 'enemy');
     enemy.setVelocityX(100).setBounce(1).setCollideWorldBounds(true);
     this.physics.add.collider(this.enemies, this.platforms);
     this.physics.add.overlap(this.player, this.enemies, this.hitEnemy, null, this);

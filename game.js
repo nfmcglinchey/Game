@@ -15,36 +15,65 @@ function moveEntity(entity, cursors, jumpVelocity = -330, speed = 160) {
   }
 }
 
-// Global function to add mobile on-screen controls
+// Helper to add mobile controls with dynamic positioning
 function addMobileControls(scene) {
   scene.mobileControls = { left: false, right: false, jump: false };
+  // Group to hold the buttons (for easy repositioning on resize)
+  scene.mobileControlsGroup = scene.add.group();
 
-  // Create left button
-  let leftButton = scene.add.rectangle(60, GAME_HEIGHT - 60, 80, 80, 0x0000ff, 0.5)
+  // Calculate button size and margin based on current canvas size
+  let buttonSize = Math.min(scene.scale.width, scene.scale.height) * 0.15;
+  let margin = buttonSize * 0.2;
+
+  // Left button
+  let leftButton = scene.add.rectangle(
+    margin + buttonSize / 2,
+    scene.scale.height - margin - buttonSize / 2,
+    buttonSize,
+    buttonSize,
+    0x0000ff,
+    0.5
+  )
     .setScrollFactor(0)
     .setInteractive();
   leftButton.on('pointerdown', () => { scene.mobileControls.left = true; });
   leftButton.on('pointerup', () => { scene.mobileControls.left = false; });
   leftButton.on('pointerout', () => { scene.mobileControls.left = false; });
+  scene.mobileControlsGroup.add(leftButton);
 
-  // Create right button
-  let rightButton = scene.add.rectangle(160, GAME_HEIGHT - 60, 80, 80, 0x00ff00, 0.5)
+  // Right button
+  let rightButton = scene.add.rectangle(
+    margin * 2 + buttonSize * 1.5,
+    scene.scale.height - margin - buttonSize / 2,
+    buttonSize,
+    buttonSize,
+    0x00ff00,
+    0.5
+  )
     .setScrollFactor(0)
     .setInteractive();
   rightButton.on('pointerdown', () => { scene.mobileControls.right = true; });
   rightButton.on('pointerup', () => { scene.mobileControls.right = false; });
   rightButton.on('pointerout', () => { scene.mobileControls.right = false; });
+  scene.mobileControlsGroup.add(rightButton);
 
-  // Create jump button
-  let jumpButton = scene.add.rectangle(GAME_WIDTH - 60, GAME_HEIGHT - 60, 80, 80, 0xff0000, 0.5)
+  // Jump button
+  let jumpButton = scene.add.rectangle(
+    scene.scale.width - margin - buttonSize / 2,
+    scene.scale.height - margin - buttonSize / 2,
+    buttonSize,
+    buttonSize,
+    0xff0000,
+    0.5
+  )
     .setScrollFactor(0)
     .setInteractive();
   jumpButton.on('pointerdown', () => { scene.mobileControls.jump = true; });
   jumpButton.on('pointerup', () => { scene.mobileControls.jump = false; });
   jumpButton.on('pointerout', () => { scene.mobileControls.jump = false; });
+  scene.mobileControlsGroup.add(jumpButton);
 }
 
-// Boot Scene: Preload assets
 class Boot extends Phaser.Scene {
   constructor() {
     super('Boot');
@@ -66,22 +95,21 @@ class Boot extends Phaser.Scene {
   }
 }
 
-// Main Menu Scene
 class MainMenu extends Phaser.Scene {
   constructor() {
     super('MainMenu');
   }
   create() {
-    // Request fullscreen on first input
+    // Request fullscreen on first touch
     this.input.once('pointerdown', () => {
       if (!this.scale.isFullscreen) {
         this.scale.startFullscreen();
       }
     });
 
-    this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH * 2, GAME_HEIGHT, 0x000000);
-    let startText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'Start Game', { fontSize: '32px', color: '#fff' }).setOrigin(0.5);
-    // Tween for a pulsing effect
+    this.add.rectangle(this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height, 0x000000);
+    let startText = this.add.text(this.scale.width / 2, this.scale.height / 2, 'Start Game', { fontSize: '32px', color: '#fff' })
+      .setOrigin(0.5);
     this.tweens.add({
       targets: startText,
       scale: { from: 1, to: 1.1 },
@@ -93,25 +121,23 @@ class MainMenu extends Phaser.Scene {
   }
 }
 
-// Level Select Scene
 class LevelSelect extends Phaser.Scene {
   constructor() {
     super('LevelSelect');
   }
   create() {
-    this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH * 2, GAME_HEIGHT, 0x999999);
-    this.add.text(GAME_WIDTH / 2, 150, 'Level 1: Forest', { fontSize: '24px', color: '#000' }).setOrigin(0.5);
-    this.add.text(GAME_WIDTH / 2, 250, 'Level 2: Dungeon', { fontSize: '24px', color: '#000' }).setOrigin(0.5);
-    this.add.text(GAME_WIDTH / 2, 350, 'Level 3: City', { fontSize: '24px', color: '#000' }).setOrigin(0.5);
+    this.add.rectangle(this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height, 0x999999);
+    this.add.text(this.scale.width / 2, this.scale.height * 0.2, 'Level 1: Forest', { fontSize: '24px', color: '#000' }).setOrigin(0.5);
+    this.add.text(this.scale.width / 2, this.scale.height * 0.35, 'Level 2: Dungeon', { fontSize: '24px', color: '#000' }).setOrigin(0.5);
+    this.add.text(this.scale.width / 2, this.scale.height * 0.5, 'Level 3: City', { fontSize: '24px', color: '#000' }).setOrigin(0.5);
     this.input.on('pointerdown', (pointer) => {
-      if (pointer.y < 200) this.scene.start('ForestLevel');
-      else if (pointer.y < 300) this.scene.start('DungeonLevel');
+      if (pointer.y < this.scale.height * 0.3) this.scene.start('ForestLevel');
+      else if (pointer.y < this.scale.height * 0.4) this.scene.start('DungeonLevel');
       else this.scene.start('CityLevel');
     });
   }
 }
 
-// Forest Level Scene
 class ForestLevel extends Phaser.Scene {
   constructor() {
     super('ForestLevel');
@@ -120,13 +146,9 @@ class ForestLevel extends Phaser.Scene {
     this.gameOverTriggered = false;
     this.nextLevelTriggered = false;
 
-    // Set physics world bounds
     this.physics.world.setBounds(0, 0, GAME_WIDTH * 2, GAME_HEIGHT);
+    this.add.rectangle(this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height, 0x228B22);
 
-    // Background
-    this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH * 2, GAME_HEIGHT, 0x228B22);
-
-    // Ground platforms
     this.platforms = this.physics.add.staticGroup();
     let p1 = this.platforms.create(400, 568, 'platform');
     p1.refreshBody();
@@ -135,13 +157,11 @@ class ForestLevel extends Phaser.Scene {
     this.platforms.create(600, 400, 'platform');
     this.platforms.create(50, 250, 'platform');
 
-    // Player
     this.player = this.physics.add.sprite(100, 450, 'player');
     this.player.setBounce(0.2);
     this.player.setCollideWorldBounds(true);
     this.physics.add.collider(this.player, this.platforms);
 
-    // Enemy
     this.enemies = this.physics.add.group();
     let enemy = this.enemies.create(400, 500, 'enemy');
     enemy.setVelocityX(100);
@@ -150,21 +170,22 @@ class ForestLevel extends Phaser.Scene {
     this.physics.add.collider(this.enemies, this.platforms);
     this.physics.add.overlap(this.player, this.enemies, this.hitEnemy, null, this);
 
-    // Door to next level
     let exit = this.physics.add.sprite(1500, 550, 'door');
     exit.setImmovable(true);
     exit.body.allowGravity = false;
     this.physics.add.collider(exit, this.platforms);
     this.physics.add.overlap(this.player, exit, this.nextLevel, null, this);
 
-    // Camera and input
     this.cameras.main.setBounds(0, 0, GAME_WIDTH * 2, GAME_HEIGHT);
     this.cameras.main.startFollow(this.player);
     this.cursors = this.input.keyboard.createCursorKeys();
 
-    // Mobile controls for iOS/Android
     if (this.sys.game.device.os.iOS || this.sys.game.device.os.android) {
       addMobileControls(this);
+      this.scale.on('resize', () => {
+        if (this.mobileControlsGroup) { this.mobileControlsGroup.clear(true, true); }
+        addMobileControls(this);
+      });
     }
   }
   update() {
@@ -203,7 +224,6 @@ class ForestLevel extends Phaser.Scene {
   }
 }
 
-// Dungeon Level Scene
 class DungeonLevel extends Phaser.Scene {
   constructor() {
     super('DungeonLevel');
@@ -213,9 +233,8 @@ class DungeonLevel extends Phaser.Scene {
     this.gameOverTriggered = false;
 
     this.physics.world.setBounds(0, 0, GAME_WIDTH * 2, GAME_HEIGHT);
-    this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH * 2, GAME_HEIGHT, 0x4B0082);
+    this.add.rectangle(this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height, 0x4B0082);
 
-    // Ground platforms
     this.platforms = this.physics.add.staticGroup();
     let p1 = this.platforms.create(400, 568, 'platform');
     p1.refreshBody();
@@ -225,13 +244,11 @@ class DungeonLevel extends Phaser.Scene {
     this.platforms.create(600, 300, 'platform');
     this.platforms.create(400, 275, 'platform');
 
-    // Player
     this.player = this.physics.add.sprite(100, 450, 'player');
     this.player.setBounce(0.2);
     this.player.setCollideWorldBounds(true);
     this.physics.add.collider(this.player, this.platforms);
 
-    // Key pickup
     this.hasKey = false;
     let dungeonKey = this.physics.add.sprite(500, 200, 'key');
     dungeonKey.body.allowGravity = false;
@@ -241,7 +258,6 @@ class DungeonLevel extends Phaser.Scene {
       this.hasKey = true;
     }, null, this);
 
-    // Enemy
     this.enemies = this.physics.add.group();
     let enemy = this.enemies.create(300, 500, 'enemy');
     enemy.setVelocityX(100);
@@ -250,7 +266,6 @@ class DungeonLevel extends Phaser.Scene {
     this.physics.add.collider(this.enemies, this.platforms);
     this.physics.add.overlap(this.player, enemy, this.hitEnemy, null, this);
 
-    // Door to City Level
     let door = this.physics.add.sprite(1500, 550, 'door');
     door.setImmovable(true);
     door.body.allowGravity = false;
@@ -263,14 +278,16 @@ class DungeonLevel extends Phaser.Scene {
       }
     }, null, this);
 
-    // Camera and input
     this.cameras.main.setBounds(0, 0, GAME_WIDTH * 2, GAME_HEIGHT);
     this.cameras.main.startFollow(this.player);
     this.cursors = this.input.keyboard.createCursorKeys();
 
-    // Mobile controls for iOS/Android
     if (this.sys.game.device.os.iOS || this.sys.game.device.os.android) {
       addMobileControls(this);
+      this.scale.on('resize', () => {
+        if (this.mobileControlsGroup) { this.mobileControlsGroup.clear(true, true); }
+        addMobileControls(this);
+      });
     }
   }
   update() {
@@ -303,16 +320,14 @@ class DungeonLevel extends Phaser.Scene {
   }
 }
 
-// City Level Scene
 class CityLevel extends Phaser.Scene {
   constructor() {
     super('CityLevel');
   }
   create() {
     this.physics.world.setBounds(0, 0, GAME_WIDTH * 2, GAME_HEIGHT);
-    this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH * 2, GAME_HEIGHT, 0x808080);
+    this.add.rectangle(this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height, 0x808080);
 
-    // Ground platforms
     this.platforms = this.physics.add.staticGroup();
     let plat1 = this.platforms.create(400, 568, 'platform');
     plat1.refreshBody();
@@ -321,13 +336,11 @@ class CityLevel extends Phaser.Scene {
     this.platforms.create(800, 400, 'platform');
     this.platforms.create(1200, 300, 'platform');
 
-    // Player
     this.player = this.physics.add.sprite(100, 450, 'player');
     this.player.setBounce(0.2);
     this.player.setCollideWorldBounds(true);
     this.physics.add.collider(this.player, this.platforms);
 
-    // Boss fight – win condition
     let boss = this.physics.add.sprite(1400, 550, 'boss');
     boss.setImmovable(true);
     boss.body.allowGravity = false;
@@ -337,26 +350,27 @@ class CityLevel extends Phaser.Scene {
         this.bossDefeated = true;
         boss.disableBody(true, true);
         if (navigator.vibrate) navigator.vibrate(100);
-        this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'You Win!', { fontSize: '48px', color: '#000' }).setOrigin(0.5);
+        this.add.text(this.scale.width / 2, this.scale.height / 2, 'You Win!', { fontSize: '48px', color: '#000' }).setOrigin(0.5);
         this.time.delayedCall(2000, () => this.scene.start('MainMenu'));
       }
     }, null, this);
 
-    // Bike bonus: place the bike closer and visible from the start
     this.bike = this.physics.add.sprite(250, 450, 'bike');
     this.bike.body.setSize(this.bike.width, this.bike.height);
     this.bike.setCollideWorldBounds(true);
     this.physics.add.collider(this.bike, this.platforms);
 
-    // Camera and input
     this.cameras.main.setBounds(0, 0, GAME_WIDTH * 2, GAME_HEIGHT);
     this.cameras.main.startFollow(this.player);
     this.cursors = this.input.keyboard.createCursorKeys();
     this.isOnBike = false;
 
-    // Mobile controls for player when not on bike
     if (this.sys.game.device.os.iOS || this.sys.game.device.os.android) {
       addMobileControls(this);
+      this.scale.on('resize', () => {
+        if (this.mobileControlsGroup) { this.mobileControlsGroup.clear(true, true); }
+        addMobileControls(this);
+      });
     }
   }
   update() {
@@ -397,19 +411,17 @@ class CityLevel extends Phaser.Scene {
   }
 }
 
-// Game Over Scene
 class GameOver extends Phaser.Scene {
   constructor() {
     super('GameOver');
   }
   create() {
-    this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH * 2, GAME_HEIGHT, 0x000000);
-    this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'Game Over', { fontSize: '32px', color: '#fff' }).setOrigin(0.5);
+    this.add.rectangle(this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height, 0x000000);
+    this.add.text(this.scale.width / 2, this.scale.height / 2, 'Game Over', { fontSize: '32px', color: '#fff' }).setOrigin(0.5);
     this.input.on('pointerdown', () => this.scene.start('MainMenu'));
   }
 }
 
-// Game configuration and initialization
 const config = {
   type: Phaser.AUTO,
   width: GAME_WIDTH,
@@ -417,15 +429,11 @@ const config = {
   parent: 'game-container',
   physics: {
     default: 'arcade',
-    arcade: {
-      gravity: { y: 300 },
-      debug: false
-    }
+    arcade: { gravity: { y: 300 }, debug: false }
   },
   scale: {
-    mode: Phaser.Scale.FIT,
-    autoCenter: Phaser.Scale.CENTER_BOTH,
-    orientation: Phaser.Scale.LANDSCAPE
+    mode: Phaser.Scale.RESIZE,
+    autoCenter: Phaser.Scale.CENTER_BOTH
   },
   scene: [Boot, MainMenu, LevelSelect, ForestLevel, DungeonLevel, CityLevel, GameOver]
 };

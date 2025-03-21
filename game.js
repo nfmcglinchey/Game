@@ -8,7 +8,7 @@ function getSafeBottom() {
   return safeArea;
 }
 
-// Shared helper for player movement
+// Shared helper for player movement (for keyboard fallback)
 function moveEntity(entity, cursors, jumpVelocity = -330, speed = 160) {
   if (cursors.left.isDown) {
     entity.setVelocityX(-speed);
@@ -112,7 +112,7 @@ class MainMenu extends Phaser.Scene {
     this.add.rectangle(this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height, 0x000000);
     let startText = this.add.text(this.scale.width / 2, this.scale.height / 2, 'Start Game', { fontSize: '32px', color: '#fff' })
       .setOrigin(0.5);
-    // Pulsing animation
+    // Pulsing animation for a polished feel
     this.tweens.add({
       targets: startText,
       scale: { from: 1, to: 1.1 },
@@ -185,6 +185,13 @@ class ForestLevel extends Phaser.Scene {
     this.cameras.main.startFollow(this.player);
     this.cursors = this.input.keyboard.createCursorKeys();
 
+    // For touch input: record initial touch Y for jump detection
+    this.input.on('pointerdown', (pointer) => {
+      this.touchStartY = pointer.y;
+      this.jumpTriggered = false;
+    });
+
+    // Optionally add mobile on-screen controls
     if (this.sys.game.device.os.iOS || this.sys.game.device.os.android) {
       addMobileControls(this);
       this.scale.on('resize', () => {
@@ -205,6 +212,16 @@ class ForestLevel extends Phaser.Scene {
       if (this.mobileControls.jump && this.player.body.blocked.down) {
         this.player.setVelocityY(-330);
         this.mobileControls.jump = false;
+      }
+    } else if (this.input.activePointer.isDown) {
+      let pointer = this.input.activePointer;
+      let dx = pointer.x - this.player.x;
+      let factor = 0.1;
+      let vx = Phaser.Math.Clamp(dx * factor, -300, 300);
+      this.player.setVelocityX(vx);
+      if (!this.jumpTriggered && (this.touchStartY - pointer.y) > 30 && this.player.body.blocked.down) {
+        this.player.setVelocityY(-330);
+        this.jumpTriggered = true;
       }
     } else {
       moveEntity(this.player, this.cursors);
@@ -255,6 +272,7 @@ class DungeonLevel extends Phaser.Scene {
     this.player.setCollideWorldBounds(true);
     this.physics.add.collider(this.player, this.platforms);
 
+    // Key pickup
     this.hasKey = false;
     let dungeonKey = this.physics.add.sprite(500, 200, 'key');
     dungeonKey.body.allowGravity = false;
@@ -288,6 +306,11 @@ class DungeonLevel extends Phaser.Scene {
     this.cameras.main.startFollow(this.player);
     this.cursors = this.input.keyboard.createCursorKeys();
 
+    this.input.on('pointerdown', (pointer) => {
+      this.touchStartY = pointer.y;
+      this.jumpTriggered = false;
+    });
+
     if (this.sys.game.device.os.iOS || this.sys.game.device.os.android) {
       addMobileControls(this);
       this.scale.on('resize', () => {
@@ -308,6 +331,16 @@ class DungeonLevel extends Phaser.Scene {
       if (this.mobileControls.jump && this.player.body.blocked.down) {
         this.player.setVelocityY(-330);
         this.mobileControls.jump = false;
+      }
+    } else if (this.input.activePointer.isDown) {
+      let pointer = this.input.activePointer;
+      let dx = pointer.x - this.player.x;
+      let factor = 0.1;
+      let vx = Phaser.Math.Clamp(dx * factor, -300, 300);
+      this.player.setVelocityX(vx);
+      if (!this.jumpTriggered && (this.touchStartY - pointer.y) > 30 && this.player.body.blocked.down) {
+        this.player.setVelocityY(-330);
+        this.jumpTriggered = true;
       }
     } else {
       moveEntity(this.player, this.cursors);
@@ -348,20 +381,38 @@ class CityLevel extends Phaser.Scene {
     this.player.setCollideWorldBounds(true);
     this.physics.add.collider(this.player, this.platforms);
 
-    let boss = this.physics.add.sprite(1400, 550, 'boss');
-    boss.setImmovable(true);
-    boss.body.allowGravity = false;
-    this.physics.add.collider(boss, this.platforms);
-    this.physics.add.overlap(this.player, boss, () => {
-      if (!this.bossDefeated) {
-        this.bossDefeated = true;
-        boss.disableBody(true, true);
-        if (navigator.vibrate) navigator.vibrate(100);
-        this.add.text(this.scale.width / 2, this.scale.height / 2, 'You Win!', { fontSize: '48px', color: '#000' }).setOrigin(0.5);
-        this.time.delayedCall(2000, () => this.scene.start('MainMenu'));
+    // Create the boss.
+    this.boss = this.physics.add.sprite(1400, 550, 'boss');
+    this.boss.setImmovable(true);
+    this.boss.body.allowGravity = false;
+    this.physics.add.collider(this.boss, this.platforms);
+
+    // Boss collision with player.
+    this.physics.add.overlap(this.player, this.boss, () => {
+      if (this.isOnBike) {
+        // If on bike, "explode" the bike.
+        if (this.bike) {
+          this.bike.disableBody(true, true);
+          this.bike = null;
+        }
+        this.isOnBike = false;
+        // Reposition the player halfway back in the level.
+        this.player.x = GAME_WIDTH; // halfway (since level width = GAME_WIDTH * 2)
+        this.player.y = 450;
+        if (navigator.vibrate) navigator.vibrate(200);
+      } else {
+        // Normal win condition.
+        if (!this.bossDefeated) {
+          this.bossDefeated = true;
+          this.boss.disableBody(true, true);
+          if (navigator.vibrate) navigator.vibrate(100);
+          this.add.text(this.scale.width / 2, this.scale.height / 2, 'You Win!', { fontSize: '48px', color: '#000' }).setOrigin(0.5);
+          this.time.delayedCall(2000, () => this.scene.start('MainMenu'));
+        }
       }
     }, null, this);
 
+    // Bike bonus: place the bike closer and visible from the start.
     this.bike = this.physics.add.sprite(250, 450, 'bike');
     this.bike.body.setSize(this.bike.width, this.bike.height);
     this.bike.setCollideWorldBounds(true);
@@ -379,6 +430,12 @@ class CityLevel extends Phaser.Scene {
         addMobileControls(this);
       });
     }
+
+    // For touch input: record initial Y for jump detection in CityLevel (when not on bike)
+    this.input.on('pointerdown', (pointer) => {
+      this.touchStartY = pointer.y;
+      this.jumpTriggered = false;
+    });
   }
   update() {
     if (this.isOnBike) {
@@ -394,23 +451,22 @@ class CityLevel extends Phaser.Scene {
       }
       this.cameras.main.startFollow(this.bike);
     } else {
-      if (this.mobileControls) {
-        if (this.mobileControls.left) {
-          this.player.setVelocityX(-160);
-        } else if (this.mobileControls.right) {
-          this.player.setVelocityX(160);
-        } else {
-          this.player.setVelocityX(0);
-        }
-        if (this.mobileControls.jump && this.player.body.blocked.down) {
+      if (this.input.activePointer.isDown) {
+        let pointer = this.input.activePointer;
+        let dx = pointer.x - this.player.x;
+        let factor = 0.1;
+        let vx = Phaser.Math.Clamp(dx * factor, -300, 300);
+        this.player.setVelocityX(vx);
+        if (!this.jumpTriggered && (this.touchStartY - pointer.y) > 30 && this.player.body.blocked.down) {
           this.player.setVelocityY(-330);
-          this.mobileControls.jump = false;
+          this.jumpTriggered = true;
         }
       } else {
         moveEntity(this.player, this.cursors);
       }
     }
-    if (!this.isOnBike && Phaser.Math.Distance.Between(this.player.x, this.player.y, this.bike.x, this.bike.y) < 50) {
+    // Switch to bike control if player is close to bike.
+    if (!this.isOnBike && this.bike && Phaser.Math.Distance.Between(this.player.x, this.player.y, this.bike.x, this.bike.y) < 50) {
       this.isOnBike = true;
       this.player.disableBody(true, true);
       this.cameras.main.startFollow(this.bike);

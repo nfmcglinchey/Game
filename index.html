@@ -2,16 +2,16 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <!-- Ensure proper scaling and responsiveness on mobile -->
+  <!-- Ensure proper scaling on iPhone -->
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <title>Retro Side-Scroller</title>
   <link rel="manifest" href="manifest.json">
-  <!-- Make sure you have Phaser 3.55.2 available -->
+  <!-- Phaser 3.55.2 -->
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
-  <!-- Load your main game code -->
+  <!-- Your game code -->
   <script src="game.js"></script>
   <script>
-    // Register the service worker if supported
+    // Register service worker if supported
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js')
         .then(reg => console.log('Service Worker registered:', reg.scope))
@@ -19,16 +19,18 @@
     }
   </script>
   <style>
-    /* Optional: handle safe areas for devices with notches */
-    :root {
-      --safe-area-inset-bottom: env(safe-area-inset-bottom);
+    /* Inline CSS */
+    body { 
+      margin: 0; 
+      padding: 0; 
+      overflow: hidden; 
     }
-    body { margin: 0; padding: 0; overflow: hidden; }
     #game-container {
+      width: 100%;
+      height: 100vh;
       display: flex;
       justify-content: center;
       align-items: center;
-      height: 100vh;
     }
   </style>
 </head>

@@ -1,6 +1,13 @@
 const GAME_WIDTH = 800;
 const GAME_HEIGHT = 600;
 
+// Helper to get safe area bottom inset (if available)
+function getSafeBottom() {
+  // Returns the CSS safe-area-inset-bottom or 0 if not defined
+  const safeArea = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--safe-area-inset-bottom')) || 0;
+  return safeArea;
+}
+
 // Shared helper for player movement
 function moveEntity(entity, cursors, jumpVelocity = -330, speed = 160) {
   if (cursors.left.isDown) {
@@ -15,65 +22,59 @@ function moveEntity(entity, cursors, jumpVelocity = -330, speed = 160) {
   }
 }
 
-// Helper to add mobile controls with dynamic positioning
+// Helper to add mobile controls with dynamic positioning and animations
 function addMobileControls(scene) {
   scene.mobileControls = { left: false, right: false, jump: false };
-  // Group to hold the buttons (for easy repositioning on resize)
   scene.mobileControlsGroup = scene.add.group();
 
-  // Calculate button size and margin based on current canvas size
+  let safeBottom = getSafeBottom();
   let buttonSize = Math.min(scene.scale.width, scene.scale.height) * 0.15;
   let margin = buttonSize * 0.2;
 
   // Left button
   let leftButton = scene.add.rectangle(
     margin + buttonSize / 2,
-    scene.scale.height - margin - buttonSize / 2,
+    scene.scale.height - margin - buttonSize / 2 - safeBottom,
     buttonSize,
     buttonSize,
     0x0000ff,
     0.5
-  )
-    .setScrollFactor(0)
-    .setInteractive();
-  leftButton.on('pointerdown', () => { scene.mobileControls.left = true; });
-  leftButton.on('pointerup', () => { scene.mobileControls.left = false; });
-  leftButton.on('pointerout', () => { scene.mobileControls.left = false; });
+  ).setScrollFactor(0).setInteractive();
+  leftButton.on('pointerdown', () => { scene.mobileControls.left = true; leftButton.setScale(0.9); });
+  leftButton.on('pointerup', () => { scene.mobileControls.left = false; leftButton.setScale(1); });
+  leftButton.on('pointerout', () => { scene.mobileControls.left = false; leftButton.setScale(1); });
   scene.mobileControlsGroup.add(leftButton);
 
   // Right button
   let rightButton = scene.add.rectangle(
     margin * 2 + buttonSize * 1.5,
-    scene.scale.height - margin - buttonSize / 2,
+    scene.scale.height - margin - buttonSize / 2 - safeBottom,
     buttonSize,
     buttonSize,
     0x00ff00,
     0.5
-  )
-    .setScrollFactor(0)
-    .setInteractive();
-  rightButton.on('pointerdown', () => { scene.mobileControls.right = true; });
-  rightButton.on('pointerup', () => { scene.mobileControls.right = false; });
-  rightButton.on('pointerout', () => { scene.mobileControls.right = false; });
+  ).setScrollFactor(0).setInteractive();
+  rightButton.on('pointerdown', () => { scene.mobileControls.right = true; rightButton.setScale(0.9); });
+  rightButton.on('pointerup', () => { scene.mobileControls.right = false; rightButton.setScale(1); });
+  rightButton.on('pointerout', () => { scene.mobileControls.right = false; rightButton.setScale(1); });
   scene.mobileControlsGroup.add(rightButton);
 
   // Jump button
   let jumpButton = scene.add.rectangle(
     scene.scale.width - margin - buttonSize / 2,
-    scene.scale.height - margin - buttonSize / 2,
+    scene.scale.height - margin - buttonSize / 2 - safeBottom,
     buttonSize,
     buttonSize,
     0xff0000,
     0.5
-  )
-    .setScrollFactor(0)
-    .setInteractive();
-  jumpButton.on('pointerdown', () => { scene.mobileControls.jump = true; });
-  jumpButton.on('pointerup', () => { scene.mobileControls.jump = false; });
-  jumpButton.on('pointerout', () => { scene.mobileControls.jump = false; });
+  ).setScrollFactor(0).setInteractive();
+  jumpButton.on('pointerdown', () => { scene.mobileControls.jump = true; jumpButton.setScale(0.9); });
+  jumpButton.on('pointerup', () => { scene.mobileControls.jump = false; jumpButton.setScale(1); });
+  jumpButton.on('pointerout', () => { scene.mobileControls.jump = false; jumpButton.setScale(1); });
   scene.mobileControlsGroup.add(jumpButton);
 }
 
+// Boot Scene: Preload assets
 class Boot extends Phaser.Scene {
   constructor() {
     super('Boot');
@@ -95,6 +96,7 @@ class Boot extends Phaser.Scene {
   }
 }
 
+// Main Menu Scene
 class MainMenu extends Phaser.Scene {
   constructor() {
     super('MainMenu');
@@ -110,6 +112,7 @@ class MainMenu extends Phaser.Scene {
     this.add.rectangle(this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height, 0x000000);
     let startText = this.add.text(this.scale.width / 2, this.scale.height / 2, 'Start Game', { fontSize: '32px', color: '#fff' })
       .setOrigin(0.5);
+    // Pulsing animation
     this.tweens.add({
       targets: startText,
       scale: { from: 1, to: 1.1 },
@@ -121,6 +124,7 @@ class MainMenu extends Phaser.Scene {
   }
 }
 
+// Level Select Scene
 class LevelSelect extends Phaser.Scene {
   constructor() {
     super('LevelSelect');
@@ -138,6 +142,7 @@ class LevelSelect extends Phaser.Scene {
   }
 }
 
+// Forest Level Scene
 class ForestLevel extends Phaser.Scene {
   constructor() {
     super('ForestLevel');
@@ -224,6 +229,7 @@ class ForestLevel extends Phaser.Scene {
   }
 }
 
+// Dungeon Level Scene
 class DungeonLevel extends Phaser.Scene {
   constructor() {
     super('DungeonLevel');
@@ -320,6 +326,7 @@ class DungeonLevel extends Phaser.Scene {
   }
 }
 
+// City Level Scene
 class CityLevel extends Phaser.Scene {
   constructor() {
     super('CityLevel');
@@ -411,6 +418,7 @@ class CityLevel extends Phaser.Scene {
   }
 }
 
+// Game Over Scene
 class GameOver extends Phaser.Scene {
   constructor() {
     super('GameOver');
@@ -433,7 +441,8 @@ const config = {
   },
   scale: {
     mode: Phaser.Scale.RESIZE,
-    autoCenter: Phaser.Scale.CENTER_BOTH
+    autoCenter: Phaser.Scale.CENTER_BOTH,
+    orientation: Phaser.Scale.LANDSCAPE
   },
   scene: [Boot, MainMenu, LevelSelect, ForestLevel, DungeonLevel, CityLevel, GameOver]
 };

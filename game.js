@@ -117,9 +117,40 @@ class ForestLevel extends Phaser.Scene {
     this.cameras.main.setBounds(0, 0, GAME_WIDTH * 2, GAME_HEIGHT);
     this.cameras.main.startFollow(this.player);
     this.cursors = this.input.keyboard.createCursorKeys();
+
+    // Touch controls setup (optional)
+    this.input.on('pointerdown', (pointer) => {
+      this.touchStartX = pointer.x;
+      this.touchStartY = pointer.y;
+      this.touching = true;
+    });
+    this.input.on('pointerup', () => {
+      this.touching = false;
+      this.player.setVelocityX(0);
+    });
   }
   update() {
     moveEntity(this.player, this.cursors);
+    // Handle touch input
+    if (this.touching) {
+      const pointer = this.input.activePointer;
+      const diffX = pointer.x - this.touchStartX;
+      const diffY = pointer.y - this.touchStartY;
+
+      // Horizontal movement (left/right swipes)
+      if (Math.abs(diffX) > Math.abs(diffY)) {
+        if (diffX > 20) {
+          this.player.setVelocityX(160);
+        } else if (diffX < -20) {
+          this.player.setVelocityX(-160);
+        }
+      }
+      // Vertical movement (jump on upward swipe)
+      if (diffY < -50 && this.player.body.blocked.down) {
+        this.player.setVelocityY(-330);
+        this.touching = false;
+      }
+    }
   }
   hitEnemy(player, enemy) {
     if (player.body.velocity.y > 0 && player.y < enemy.y) {
@@ -257,10 +288,8 @@ class CityLevel extends Phaser.Scene {
 
     // Bike bonus: place the bike closer and visible from the start
     this.bike = this.physics.add.sprite(250, 450, 'bike');
-    // Set the bike's body to match its sprite
     this.bike.body.setSize(this.bike.width, this.bike.height);
     this.bike.setCollideWorldBounds(true);
-    // Ensure the bike collides with the platforms
     this.physics.add.collider(this.bike, this.platforms);
 
     // Camera and input
@@ -271,7 +300,6 @@ class CityLevel extends Phaser.Scene {
   }
   update() {
     if (this.isOnBike) {
-      // Bike control
       if (this.cursors.left.isDown) {
         this.bike.setVelocityX(-300);
       } else if (this.cursors.right.isDown) {
@@ -284,10 +312,8 @@ class CityLevel extends Phaser.Scene {
       }
       this.cameras.main.startFollow(this.bike);
     } else {
-      // Player control
       moveEntity(this.player, this.cursors);
     }
-    // If the player is close enough to the bike, switch control
     if (!this.isOnBike && Phaser.Math.Distance.Between(this.player.x, this.player.y, this.bike.x, this.bike.y) < 50) {
       this.isOnBike = true;
       this.player.disableBody(true, true);
@@ -325,78 +351,3 @@ const config = {
 };
 
 const game = new Phaser.Game(config);
-
-create() {
-  this.gameOverTriggered = false;
-  this.nextLevelTriggered = false;
-
-  this.physics.world.setBounds(0, 0, GAME_WIDTH * 2, GAME_HEIGHT);
-  this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH * 2, GAME_HEIGHT, 0x228B22);
-
-  this.platforms = this.physics.add.staticGroup();
-  this.platforms.create(400, 568, 'platform').refreshBody();
-  this.platforms.create(1200, 568, 'platform').refreshBody();
-  this.platforms.create(600, 400, 'platform');
-  this.platforms.create(50, 250, 'platform');
-
-  this.player = this.physics.add.sprite(100, 450, 'player');
-  this.player.setBounce(0.2);
-  this.player.setCollideWorldBounds(true);
-  this.physics.add.collider(this.player, this.platforms);
-
-  this.enemies = this.physics.add.group();
-  let enemy = this.enemies.create(400, 500, 'enemy');
-  enemy.setVelocityX(100);
-  enemy.setBounce(1);
-  enemy.setCollideWorldBounds(true);
-  this.physics.add.collider(this.enemies, this.platforms);
-  this.physics.add.overlap(this.player, this.enemies, this.hitEnemy, null, this);
-
-  let exit = this.physics.add.sprite(1500, 550, 'door');
-  exit.setImmovable(true);
-  exit.body.allowGravity = false;
-  this.physics.add.collider(exit, this.platforms);
-  this.physics.add.overlap(this.player, exit, this.nextLevel, null, this);
-
-  this.cameras.main.setBounds(0, 0, GAME_WIDTH * 2, GAME_HEIGHT);
-  this.cameras.main.startFollow(this.player);
-  this.cursors = this.input.keyboard.createCursorKeys();
-
-  // Touch controls setup
-  this.input.on('pointerdown', (pointer) => {
-    this.touchStartX = pointer.x;
-    this.touchStartY = pointer.y;
-    this.touching = true;
-  });
-
-  this.input.on('pointerup', () => {
-    this.touching = false;
-    this.player.setVelocityX(0);
-  });
-}
-
-update() {
-  moveEntity(this.player, this.cursors);
-
-  // Handle touch input
-  if (this.touching) {
-    const pointer = this.input.activePointer;
-    const diffX = pointer.x - this.touchStartX;
-    const diffY = pointer.y - this.touchStartY;
-
-    // Horizontal movement (left/right swipes)
-    if (Math.abs(diffX) > Math.abs(diffY)) {
-      if (diffX > 20) {
-        this.player.setVelocityX(160);
-      } else if (diffX < -20) {
-        this.player.setVelocityX(-160);
-      }
-    }
-
-    // Vertical movement (jump on upward swipe)
-    if (diffY < -50 && this.player.body.blocked.down) {
-      this.player.setVelocityY(-330);
-      this.touching = false; // prevent multiple jumps per swipe
-    }
-  }
-}

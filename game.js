@@ -15,6 +15,35 @@ function moveEntity(entity, cursors, jumpVelocity = -330, speed = 160) {
   }
 }
 
+// Global function to add mobile on-screen controls
+function addMobileControls(scene) {
+  scene.mobileControls = { left: false, right: false, jump: false };
+
+  // Create left button
+  let leftButton = scene.add.rectangle(60, GAME_HEIGHT - 60, 80, 80, 0x0000ff, 0.5)
+    .setScrollFactor(0)
+    .setInteractive();
+  leftButton.on('pointerdown', () => { scene.mobileControls.left = true; });
+  leftButton.on('pointerup', () => { scene.mobileControls.left = false; });
+  leftButton.on('pointerout', () => { scene.mobileControls.left = false; });
+
+  // Create right button
+  let rightButton = scene.add.rectangle(160, GAME_HEIGHT - 60, 80, 80, 0x00ff00, 0.5)
+    .setScrollFactor(0)
+    .setInteractive();
+  rightButton.on('pointerdown', () => { scene.mobileControls.right = true; });
+  rightButton.on('pointerup', () => { scene.mobileControls.right = false; });
+  rightButton.on('pointerout', () => { scene.mobileControls.right = false; });
+
+  // Create jump button
+  let jumpButton = scene.add.rectangle(GAME_WIDTH - 60, GAME_HEIGHT - 60, 80, 80, 0xff0000, 0.5)
+    .setScrollFactor(0)
+    .setInteractive();
+  jumpButton.on('pointerdown', () => { scene.mobileControls.jump = true; });
+  jumpButton.on('pointerup', () => { scene.mobileControls.jump = false; });
+  jumpButton.on('pointerout', () => { scene.mobileControls.jump = false; });
+}
+
 // Boot Scene: Preload assets
 class Boot extends Phaser.Scene {
   constructor() {
@@ -43,8 +72,23 @@ class MainMenu extends Phaser.Scene {
     super('MainMenu');
   }
   create() {
+    // Request fullscreen on first input
+    this.input.once('pointerdown', () => {
+      if (!this.scale.isFullscreen) {
+        this.scale.startFullscreen();
+      }
+    });
+
     this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH * 2, GAME_HEIGHT, 0x000000);
-    this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'Start Game', { fontSize: '32px', color: '#fff' }).setOrigin(0.5);
+    let startText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'Start Game', { fontSize: '32px', color: '#fff' }).setOrigin(0.5);
+    // Tween for a pulsing effect
+    this.tweens.add({
+      targets: startText,
+      scale: { from: 1, to: 1.1 },
+      yoyo: true,
+      repeat: -1,
+      duration: 800
+    });
     this.input.on('pointerdown', () => this.scene.start('LevelSelect'));
   }
 }
@@ -118,46 +162,36 @@ class ForestLevel extends Phaser.Scene {
     this.cameras.main.startFollow(this.player);
     this.cursors = this.input.keyboard.createCursorKeys();
 
-    // Touch controls setup (optional)
-    this.input.on('pointerdown', (pointer) => {
-      this.touchStartX = pointer.x;
-      this.touchStartY = pointer.y;
-      this.touching = true;
-    });
-    this.input.on('pointerup', () => {
-      this.touching = false;
-      this.player.setVelocityX(0);
-    });
+    // Mobile controls for iOS/Android
+    if (this.sys.game.device.os.iOS || this.sys.game.device.os.android) {
+      addMobileControls(this);
+    }
   }
   update() {
-    moveEntity(this.player, this.cursors);
-    // Handle touch input
-    if (this.touching) {
-      const pointer = this.input.activePointer;
-      const diffX = pointer.x - this.touchStartX;
-      const diffY = pointer.y - this.touchStartY;
-
-      // Horizontal movement (left/right swipes)
-      if (Math.abs(diffX) > Math.abs(diffY)) {
-        if (diffX > 20) {
-          this.player.setVelocityX(160);
-        } else if (diffX < -20) {
-          this.player.setVelocityX(-160);
-        }
+    if (this.mobileControls) {
+      if (this.mobileControls.left) {
+        this.player.setVelocityX(-160);
+      } else if (this.mobileControls.right) {
+        this.player.setVelocityX(160);
+      } else {
+        this.player.setVelocityX(0);
       }
-      // Vertical movement (jump on upward swipe)
-      if (diffY < -50 && this.player.body.blocked.down) {
+      if (this.mobileControls.jump && this.player.body.blocked.down) {
         this.player.setVelocityY(-330);
-        this.touching = false;
+        this.mobileControls.jump = false;
       }
+    } else {
+      moveEntity(this.player, this.cursors);
     }
   }
   hitEnemy(player, enemy) {
     if (player.body.velocity.y > 0 && player.y < enemy.y) {
       enemy.disableBody(true, true);
       player.setVelocityY(-200);
+      if (navigator.vibrate) navigator.vibrate(50);
     } else if (!this.gameOverTriggered) {
       this.gameOverTriggered = true;
+      if (navigator.vibrate) navigator.vibrate(100);
       this.scene.start('GameOver');
     }
   }
@@ -233,16 +267,37 @@ class DungeonLevel extends Phaser.Scene {
     this.cameras.main.setBounds(0, 0, GAME_WIDTH * 2, GAME_HEIGHT);
     this.cameras.main.startFollow(this.player);
     this.cursors = this.input.keyboard.createCursorKeys();
+
+    // Mobile controls for iOS/Android
+    if (this.sys.game.device.os.iOS || this.sys.game.device.os.android) {
+      addMobileControls(this);
+    }
   }
   update() {
-    moveEntity(this.player, this.cursors);
+    if (this.mobileControls) {
+      if (this.mobileControls.left) {
+        this.player.setVelocityX(-160);
+      } else if (this.mobileControls.right) {
+        this.player.setVelocityX(160);
+      } else {
+        this.player.setVelocityX(0);
+      }
+      if (this.mobileControls.jump && this.player.body.blocked.down) {
+        this.player.setVelocityY(-330);
+        this.mobileControls.jump = false;
+      }
+    } else {
+      moveEntity(this.player, this.cursors);
+    }
   }
   hitEnemy(player, enemy) {
     if (player.body.velocity.y > 0 && player.y < enemy.y) {
       enemy.disableBody(true, true);
       player.setVelocityY(-200);
+      if (navigator.vibrate) navigator.vibrate(50);
     } else if (!this.gameOverTriggered) {
       this.gameOverTriggered = true;
+      if (navigator.vibrate) navigator.vibrate(100);
       this.scene.start('GameOver');
     }
   }
@@ -281,6 +336,7 @@ class CityLevel extends Phaser.Scene {
       if (!this.bossDefeated) {
         this.bossDefeated = true;
         boss.disableBody(true, true);
+        if (navigator.vibrate) navigator.vibrate(100);
         this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'You Win!', { fontSize: '48px', color: '#000' }).setOrigin(0.5);
         this.time.delayedCall(2000, () => this.scene.start('MainMenu'));
       }
@@ -297,6 +353,11 @@ class CityLevel extends Phaser.Scene {
     this.cameras.main.startFollow(this.player);
     this.cursors = this.input.keyboard.createCursorKeys();
     this.isOnBike = false;
+
+    // Mobile controls for player when not on bike
+    if (this.sys.game.device.os.iOS || this.sys.game.device.os.android) {
+      addMobileControls(this);
+    }
   }
   update() {
     if (this.isOnBike) {
@@ -312,7 +373,21 @@ class CityLevel extends Phaser.Scene {
       }
       this.cameras.main.startFollow(this.bike);
     } else {
-      moveEntity(this.player, this.cursors);
+      if (this.mobileControls) {
+        if (this.mobileControls.left) {
+          this.player.setVelocityX(-160);
+        } else if (this.mobileControls.right) {
+          this.player.setVelocityX(160);
+        } else {
+          this.player.setVelocityX(0);
+        }
+        if (this.mobileControls.jump && this.player.body.blocked.down) {
+          this.player.setVelocityY(-330);
+          this.mobileControls.jump = false;
+        }
+      } else {
+        moveEntity(this.player, this.cursors);
+      }
     }
     if (!this.isOnBike && Phaser.Math.Distance.Between(this.player.x, this.player.y, this.bike.x, this.bike.y) < 50) {
       this.isOnBike = true;
@@ -346,6 +421,11 @@ const config = {
       gravity: { y: 300 },
       debug: false
     }
+  },
+  scale: {
+    mode: Phaser.Scale.FIT,
+    autoCenter: Phaser.Scale.CENTER_BOTH,
+    orientation: Phaser.Scale.LANDSCAPE
   },
   scene: [Boot, MainMenu, LevelSelect, ForestLevel, DungeonLevel, CityLevel, GameOver]
 };

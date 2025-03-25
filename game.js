@@ -1,22 +1,22 @@
 const GAME_WIDTH = 800;
 const GAME_HEIGHT = 600;
 
-// Globals for player stats
+// Globals for player stats (these get reset on level start)
 let playerHealth = 3;
 let playerKeys = 0;
 let playerPowerUp = null;
-let originalSpeed = 160;     // Default horizontal speed
-let powerUpTimer = null;     // For resetting speed/jump after a delay
+let powerUpTimer = null;     // For resetting power-up after a delay
 let powerUpDuration = 5000;  // 5 seconds
 
 // Helper to get safe area bottom inset (if available)
 function getSafeBottom() {
-  const safeArea = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--safe-area-inset-bottom')) || 0;
+  const safeArea = parseInt(getComputedStyle(document.documentElement)
+    .getPropertyValue('--safe-area-inset-bottom')) || 0;
   return safeArea;
 }
 
 // Shared helper for player movement (keyboard fallback)
-function moveEntity(entity, cursors, jumpVelocity = -330, speed = 160) {
+function moveEntity(entity, cursors, jumpVelocity, speed) {
   if (cursors.left.isDown) {
     entity.setVelocityX(-speed);
   } else if (cursors.right.isDown) {
@@ -81,7 +81,7 @@ function addMobileControls(scene) {
   scene.mobileControlsGroup.add(jumpButton);
 }
 
-// Boot Scene: Preload assets
+// Boot Scene: Preload assets and create a dynamic ground texture.
 class Boot extends Phaser.Scene {
   constructor() {
     super('Boot');
@@ -101,6 +101,22 @@ class Boot extends Phaser.Scene {
     assets.forEach(asset => this.load.image(asset.key, asset.path));
   }
   create() {
+    // Create a dynamic texture for the ground: green with black spots.
+    let groundCanvas = this.textures.createCanvas('ground', 200, 50);
+    let ctx = groundCanvas.getContext();
+    ctx.fillStyle = '#00FF00'; // Green
+    ctx.fillRect(0, 0, 200, 50);
+    ctx.fillStyle = '#000000'; // Black spots
+    for (let i = 0; i < 10; i++) {
+      let x = Math.random() * 200;
+      let y = Math.random() * 50;
+      let r = 3 + Math.random() * 3;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    groundCanvas.refresh();
+
     this.scene.start('MainMenu');
   }
 }
@@ -111,14 +127,10 @@ class MainMenu extends Phaser.Scene {
     super('MainMenu');
   }
   create() {
-    this.input.once('pointerdown', () => {
-      if (!this.scale.isFullscreen) {
-        this.scale.startFullscreen();
-      }
-    });
-    this.add.rectangle(this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height, 0x000000);
-    let startText = this.add.text(this.scale.width / 2, this.scale.height / 2, 'Start Game', { fontSize: '32px', color: '#fff' })
-      .setOrigin(0.5);
+    // Use a full-screen background color
+    this.cameras.main.setBackgroundColor(0x000000);
+    let startText = this.add.text(this.scale.width / 2, this.scale.height / 2, 'Start Game', 
+      { fontSize: '32px', color: '#fff' }).setOrigin(0.5);
     this.tweens.add({
       targets: startText,
       scale: { from: 1, to: 1.1 },
@@ -127,6 +139,7 @@ class MainMenu extends Phaser.Scene {
       duration: 800
     });
     this.input.on('pointerdown', () => {
+      // Reset global stats
       playerHealth = 3;
       playerKeys = 0;
       playerPowerUp = null;
@@ -141,10 +154,13 @@ class LevelSelect extends Phaser.Scene {
     super('LevelSelect');
   }
   create() {
-    this.add.rectangle(this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height, 0x999999);
-    this.add.text(this.scale.width / 2, this.scale.height * 0.2, 'Level 1: Forest',  { fontSize: '24px', color: '#000' }).setOrigin(0.5);
-    this.add.text(this.scale.width / 2, this.scale.height * 0.35, 'Level 2: Dungeon',{ fontSize: '24px', color: '#000' }).setOrigin(0.5);
-    this.add.text(this.scale.width / 2, this.scale.height * 0.5, 'Level 3: City',    { fontSize: '24px', color: '#000' }).setOrigin(0.5);
+    this.cameras.main.setBackgroundColor(0x999999);
+    this.add.text(this.scale.width / 2, this.scale.height * 0.2, 'Level 1: Forest', 
+      { fontSize: '24px', color: '#000' }).setOrigin(0.5);
+    this.add.text(this.scale.width / 2, this.scale.height * 0.35, 'Level 2: Dungeon',
+      { fontSize: '24px', color: '#000' }).setOrigin(0.5);
+    this.add.text(this.scale.width / 2, this.scale.height * 0.5, 'Level 3: City', 
+      { fontSize: '24px', color: '#000' }).setOrigin(0.5);
     this.input.on('pointerdown', (pointer) => {
       if (pointer.y < this.scale.height * 0.3) this.scene.start('ForestLevel');
       else if (pointer.y < this.scale.height * 0.4) this.scene.start('DungeonLevel');
@@ -161,20 +177,29 @@ class ForestLevel extends Phaser.Scene {
   create() {
     this.gameOverTriggered = false;
     this.nextLevelTriggered = false;
+    // Set a consistent sky-blue background for the level.
+    this.cameras.main.setBackgroundColor(0x87ceeb);
     this.physics.world.setBounds(0, 0, GAME_WIDTH * 2, GAME_HEIGHT);
-    this.add.rectangle(this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height, 0x87ceeb);
+
+    // Platforms: the main ground uses the dynamic 'ground' texture.
     this.platforms = this.physics.add.staticGroup();
-    let ground1 = this.platforms.create(400, 568, 'platform').setScale(2,1).refreshBody();
-    ground1.setTint(0x654321);
-    let ground2 = this.platforms.create(1200, 568, 'platform').setScale(2,1).refreshBody();
-    ground2.setTint(0x654321);
+    let ground1 = this.platforms.create(400, 568, 'ground')
+      .setScale(2, 1).refreshBody();
+    let ground2 = this.platforms.create(1200, 568, 'ground')
+      .setScale(2, 1).refreshBody();
+    // Floating platform remains with the default platform image tinted brown.
     let floatingPlat = this.platforms.create(600, 400, 'platform');
     floatingPlat.setTint(0x654321);
     floatingPlat.refreshBody();
+
+    // Set player speed slightly slower than enemy (enemy moves at 80, so player = 70).
+    this.playerSpeed = 70;
     this.player = this.physics.add.sprite(100, 450, 'player');
     this.player.setBounce(0.2);
     this.player.setCollideWorldBounds(true);
     this.physics.add.collider(this.player, this.platforms);
+
+    // Enemy (moving at 80)
     this.enemies = this.physics.add.group();
     let enemy = this.enemies.create(500, 500, 'enemy');
     enemy.setTint(0x00ff00);
@@ -183,6 +208,8 @@ class ForestLevel extends Phaser.Scene {
     enemy.setCollideWorldBounds(true);
     this.physics.add.collider(this.enemies, this.platforms);
     this.physics.add.overlap(this.player, this.enemies, this.hitEnemy, null, this);
+
+    // Obstacles (spikes)
     this.obstacles = this.physics.add.group();
     let spike1 = this.obstacles.create(700, 535, 'spike');
     spike1.setTint(0xff4500);
@@ -190,29 +217,39 @@ class ForestLevel extends Phaser.Scene {
     spike1.body.allowGravity = false;
     this.physics.add.collider(this.obstacles, this.platforms);
     this.physics.add.overlap(this.player, this.obstacles, this.hitObstacle, null, this);
+
+    // Power-up: a speed boost (blue)
     this.powerUps = this.physics.add.group();
     let speedPower = this.powerUps.create(300, 400, 'power');
     speedPower.setTint(0x0000ff);
     speedPower.body.allowGravity = false;
     this.physics.add.overlap(this.player, speedPower, this.pickupPowerUp, null, this);
+
+    // Key: yellow
     this.keysGroup = this.physics.add.group();
     let forestKey = this.keysGroup.create(600, 350, 'key');
     forestKey.setTint(0xffff00);
     forestKey.body.allowGravity = false;
     this.physics.add.overlap(this.player, forestKey, this.pickupKey, null, this);
+
+    // Door: advances to DungeonLevel (requires a key)
     this.door = this.physics.add.sprite(1500, 550, 'door');
     this.door.setTint(0x8b4513);
     this.door.setImmovable(true);
     this.door.body.allowGravity = false;
     this.physics.add.collider(this.door, this.platforms);
     this.physics.add.overlap(this.player, this.door, this.nextLevel, null, this);
+
     this.cameras.main.setBounds(0, 0, GAME_WIDTH * 2, GAME_HEIGHT);
     this.cameras.main.startFollow(this.player);
+
     this.cursors = this.input.keyboard.createCursorKeys();
     this.input.on('pointerdown', (pointer) => {
       this.touchStartY = pointer.y;
       this.jumpTriggered = false;
     });
+
+    // Mobile controls if on phone
     if (this.sys.game.device.os.iOS || this.sys.game.device.os.android) {
       addMobileControls(this);
       this.scale.on('resize', () => {
@@ -220,17 +257,19 @@ class ForestLevel extends Phaser.Scene {
         addMobileControls(this);
       });
     }
-    this.healthText = this.add.text(10, 10, '', { fontSize: '20px', fill: '#fff' }).setScrollFactor(0);
+
+    this.healthText = this.add.text(10, 10, '', { fontSize: '20px', fill: '#fff' })
+      .setScrollFactor(0);
     this.updateHUD();
   }
   update() {
     let usedMobile = false;
     if (this.mobileControls) {
       if (this.mobileControls.left) {
-        this.player.setVelocityX(-originalSpeed);
+        this.player.setVelocityX(-this.playerSpeed);
         usedMobile = true;
       } else if (this.mobileControls.right) {
-        this.player.setVelocityX(originalSpeed);
+        this.player.setVelocityX(this.playerSpeed);
         usedMobile = true;
       } else {
         this.player.setVelocityX(0);
@@ -244,7 +283,6 @@ class ForestLevel extends Phaser.Scene {
     if (!usedMobile) {
       if (this.input.activePointer.isDown) {
         let pointer = this.input.activePointer;
-        // Use pointer.worldX so we compare world coordinates
         let dx = pointer.worldX - this.player.x;
         let factor = 0.1;
         let vx = Phaser.Math.Clamp(dx * factor, -300, 300);
@@ -255,8 +293,7 @@ class ForestLevel extends Phaser.Scene {
         }
       } else {
         let jumpVelocity = (playerPowerUp === 'jump') ? -400 : -330;
-        let speed = (playerPowerUp === 'speed') ? 250 : 160;
-        moveEntity(this.player, this.cursors, jumpVelocity, speed);
+        moveEntity(this.player, this.cursors, jumpVelocity, this.playerSpeed);
       }
     }
     this.updateHUD();
@@ -322,24 +359,31 @@ class DungeonLevel extends Phaser.Scene {
     this.gameOverTriggered = false;
     this.nextLevelTriggered = false;
     this.physics.world.setBounds(0, 0, GAME_WIDTH * 2, GAME_HEIGHT);
-    this.add.rectangle(this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height, 0x4b0082);
+    this.cameras.main.setBackgroundColor(0x4b0082);
+    // Use the ground texture for the floor platforms.
     this.platforms = this.physics.add.staticGroup();
-    let p1 = this.platforms.create(400, 568, 'platform').refreshBody();
-    p1.setTint(0x654321);
-    let p2 = this.platforms.create(1200, 568, 'platform').refreshBody();
-    p2.setTint(0x654321);
+    let p1 = this.platforms.create(400, 568, 'ground').refreshBody();
+    let p2 = this.platforms.create(1200, 568, 'ground').refreshBody();
+    // Floating platforms remain with the default platform image tinted brown.
     this.platforms.create(200, 400, 'platform').setTint(0x654321).refreshBody();
     this.platforms.create(600, 300, 'platform').setTint(0x654321).refreshBody();
     this.platforms.create(400, 275, 'platform').setTint(0x654321).refreshBody();
+
+    // In DungeonLevel, enemy moves faster – so set player speed slightly slower than enemy.
+    this.playerSpeed = 90;
     this.player = this.physics.add.sprite(100, 450, 'player');
     this.player.setBounce(0.2);
     this.player.setCollideWorldBounds(true);
     this.physics.add.collider(this.player, this.platforms);
+
+    // Power-up: jump boost (cyan)
     this.powerUps = this.physics.add.group();
     let jumpPower = this.powerUps.create(250, 250, 'power');
     jumpPower.setTint(0x00ffff);
     jumpPower.body.allowGravity = false;
     this.physics.add.overlap(this.player, jumpPower, this.pickupPowerUp, null, this);
+
+    // Key pickup
     this.hasKey = false;
     let dungeonKey = this.physics.add.sprite(500, 200, 'key');
     dungeonKey.setTint(0xffff00);
@@ -349,6 +393,8 @@ class DungeonLevel extends Phaser.Scene {
       dungeonKey.disableBody(true, true);
       this.hasKey = true;
     }, null, this);
+
+    // Enemy group – enemy moves at 100
     this.enemies = this.physics.add.group();
     let enemy = this.enemies.create(300, 500, 'enemy');
     enemy.setTint(0x00ff00);
@@ -357,12 +403,16 @@ class DungeonLevel extends Phaser.Scene {
     enemy.setCollideWorldBounds(true);
     this.physics.add.collider(this.enemies, this.platforms);
     this.physics.add.overlap(this.player, enemy, this.hitEnemy, null, this);
+
+    // Spikes (obstacles)
     this.obstacles = this.physics.add.group();
     let spike1 = this.obstacles.create(350, 535, 'spike');
     spike1.setTint(0xff4500);
     spike1.setImmovable(true);
     spike1.body.allowGravity = false;
     this.physics.add.overlap(this.player, spike1, this.hitObstacle, null, this);
+
+    // Door (requires key) leading to CityLevel
     let door = this.physics.add.sprite(1500, 550, 'door');
     door.setTint(0x8b4513);
     door.setImmovable(true);
@@ -375,6 +425,7 @@ class DungeonLevel extends Phaser.Scene {
         this.scene.start('CityLevel');
       }
     }, null, this);
+
     this.cameras.main.setBounds(0, 0, GAME_WIDTH * 2, GAME_HEIGHT);
     this.cameras.main.startFollow(this.player);
     this.cursors = this.input.keyboard.createCursorKeys();
@@ -389,17 +440,18 @@ class DungeonLevel extends Phaser.Scene {
         addMobileControls(this);
       });
     }
-    this.healthText = this.add.text(10, 10, '', { fontSize: '20px', fill: '#fff' }).setScrollFactor(0);
+    this.healthText = this.add.text(10, 10, '', { fontSize: '20px', fill: '#fff' })
+      .setScrollFactor(0);
     this.updateHUD();
   }
   update() {
     let usedMobile = false;
     if (this.mobileControls) {
       if (this.mobileControls.left) {
-        this.player.setVelocityX(-originalSpeed);
+        this.player.setVelocityX(-this.playerSpeed);
         usedMobile = true;
       } else if (this.mobileControls.right) {
-        this.player.setVelocityX(originalSpeed);
+        this.player.setVelocityX(this.playerSpeed);
         usedMobile = true;
       } else {
         this.player.setVelocityX(0);
@@ -423,8 +475,7 @@ class DungeonLevel extends Phaser.Scene {
         }
       } else {
         let jumpVelocity = (playerPowerUp === 'jump') ? -400 : -330;
-        let speed = (playerPowerUp === 'speed') ? 250 : 160;
-        moveEntity(this.player, this.cursors, jumpVelocity, speed);
+        moveEntity(this.player, this.cursors, jumpVelocity, this.playerSpeed);
       }
     }
     this.updateHUD();
@@ -474,18 +525,19 @@ class CityLevel extends Phaser.Scene {
   }
   create() {
     this.physics.world.setBounds(0, 0, GAME_WIDTH * 2, GAME_HEIGHT);
-    this.add.rectangle(this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height, 0x808080);
+    this.cameras.main.setBackgroundColor(0x808080);
     this.platforms = this.physics.add.staticGroup();
-    let plat1 = this.platforms.create(400, 568, 'platform').refreshBody();
-    plat1.setTint(0x654321);
-    let plat2 = this.platforms.create(1200, 568, 'platform').refreshBody();
-    plat2.setTint(0x654321);
+    // Use ground texture for the lower platforms.
+    let plat1 = this.platforms.create(400, 568, 'ground').refreshBody();
+    let plat2 = this.platforms.create(1200, 568, 'ground').refreshBody();
     this.platforms.create(800, 400, 'platform').setTint(0x654321).refreshBody();
     this.platforms.create(1200, 300, 'platform').setTint(0x654321).refreshBody();
+    this.playerSpeed = 90;
     this.player = this.physics.add.sprite(100, 450, 'player');
     this.player.setBounce(0.2);
     this.player.setCollideWorldBounds(true);
     this.physics.add.collider(this.player, this.platforms);
+    // Boss setup
     this.boss = this.physics.add.sprite(1400, 550, 'boss');
     this.boss.setTint(0x800080);
     this.boss.setImmovable(true);
@@ -497,12 +549,12 @@ class CityLevel extends Phaser.Scene {
         this.bossDefeated = true;
         this.boss.disableBody(true, true);
         if (navigator.vibrate) navigator.vibrate(100);
-        this.add.text(this.scale.width / 2, this.scale.height / 2, 'You Win!', { fontSize: '48px', color: '#000' })
-          .setOrigin(0.5)
-          .setScrollFactor(0);
+        this.add.text(this.scale.width / 2, this.scale.height / 2, 'You Win!', 
+          { fontSize: '48px', color: '#000' }).setOrigin(0.5).setScrollFactor(0);
         this.time.delayedCall(2000, () => this.scene.start('MainMenu'));
       }
     }, null, this);
+    // Bike bonus (optional)
     this.bike = this.physics.add.sprite(250, 450, 'bike');
     this.bike.body.setSize(this.bike.width, this.bike.height);
     this.bike.setCollideWorldBounds(true);
@@ -517,6 +569,7 @@ class CityLevel extends Phaser.Scene {
         if (navigator.vibrate) navigator.vibrate(200);
       }
     }, null, this);
+    // Obstacles
     this.obstacles = this.physics.add.group();
     let spike1 = this.obstacles.create(600, 535, 'spike');
     spike1.setTint(0xff4500);
@@ -537,7 +590,8 @@ class CityLevel extends Phaser.Scene {
         addMobileControls(this);
       });
     }
-    this.healthText = this.add.text(10, 10, '', { fontSize: '20px', fill: '#fff' }).setScrollFactor(0);
+    this.healthText = this.add.text(10, 10, '', { fontSize: '20px', fill: '#fff' })
+      .setScrollFactor(0);
     this.updateHUD();
   }
   update() {
@@ -557,10 +611,10 @@ class CityLevel extends Phaser.Scene {
       let usedMobile = false;
       if (this.mobileControls) {
         if (this.mobileControls.left) {
-          this.player.setVelocityX(-originalSpeed);
+          this.player.setVelocityX(-this.playerSpeed);
           usedMobile = true;
         } else if (this.mobileControls.right) {
-          this.player.setVelocityX(originalSpeed);
+          this.player.setVelocityX(this.playerSpeed);
           usedMobile = true;
         } else {
           this.player.setVelocityX(0);
@@ -584,8 +638,7 @@ class CityLevel extends Phaser.Scene {
           }
         } else {
           let jumpVelocity = (playerPowerUp === 'jump') ? -400 : -330;
-          let speed = (playerPowerUp === 'speed') ? 250 : 160;
-          moveEntity(this.player, this.cursors, jumpVelocity, speed);
+          moveEntity(this.player, this.cursors, jumpVelocity, this.playerSpeed);
         }
       }
       if (!this.isOnBike && this.bike && Phaser.Math.Distance.Between(this.player.x, this.player.y, this.bike.x, this.bike.y) < 50) {
@@ -616,9 +669,9 @@ class GameOver extends Phaser.Scene {
     super('GameOver');
   }
   create() {
-    this.add.rectangle(this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height, 0x000000);
-    this.add.text(this.scale.width / 2, this.scale.height / 2, 'Game Over', { fontSize: '32px', color: '#fff' })
-      .setOrigin(0.5);
+    this.cameras.main.setBackgroundColor(0x000000);
+    this.add.text(this.scale.width / 2, this.scale.height / 2, 'Game Over', 
+      { fontSize: '32px', color: '#fff' }).setOrigin(0.5);
     this.input.on('pointerdown', () => {
       playerHealth = 3;
       playerKeys = 0;

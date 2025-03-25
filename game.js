@@ -195,7 +195,7 @@ class ForestLevel extends Phaser.Scene {
     // Set player speed slightly slower than enemy (enemy moves at 80, so player = 70).
     this.playerSpeed = 70;
     this.player = this.physics.add.sprite(100, 450, 'player');
-    this.player.setBounce(0.3);
+    this.player.setBounce(0.4);
     this.player.setCollideWorldBounds(true);
     this.physics.add.collider(this.player, this.platforms);
 
@@ -370,9 +370,9 @@ class DungeonLevel extends Phaser.Scene {
     this.platforms.create(400, 275, 'platform').setTint(0x654321).refreshBody();
 
     // In DungeonLevel, enemy moves faster – so set player speed slightly slower than enemy.
-    this.playerSpeed = 90;
+    this.playerSpeed = 70;
     this.player = this.physics.add.sprite(100, 450, 'player');
-    this.player.setBounce(0.2);
+    this.player.setBounce(0.4);
     this.player.setCollideWorldBounds(true);
     this.physics.add.collider(this.player, this.platforms);
 

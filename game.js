@@ -95,9 +95,7 @@ class Boot extends Phaser.Scene {
       { key: 'key',      path: 'assets/key.png' },
       { key: 'boss',     path: 'assets/boss.png' },
       { key: 'bike',     path: 'assets/bike.png' },
-      // A "spike" or obstacle tile
       { key: 'spike',    path: 'assets/spike.png' },
-      // A "powerUp" tile or icon
       { key: 'power',    path: 'assets/power.png' }
     ];
     assets.forEach(asset => this.load.image(asset.key, asset.path));
@@ -113,17 +111,14 @@ class MainMenu extends Phaser.Scene {
     super('MainMenu');
   }
   create() {
-    // Request fullscreen on first touch
     this.input.once('pointerdown', () => {
       if (!this.scale.isFullscreen) {
         this.scale.startFullscreen();
       }
     });
-
     this.add.rectangle(this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height, 0x000000);
     let startText = this.add.text(this.scale.width / 2, this.scale.height / 2, 'Start Game', { fontSize: '32px', color: '#fff' })
       .setOrigin(0.5);
-    // Pulsing animation
     this.tweens.add({
       targets: startText,
       scale: { from: 1, to: 1.1 },
@@ -132,7 +127,6 @@ class MainMenu extends Phaser.Scene {
       duration: 800
     });
     this.input.on('pointerdown', () => {
-      // Reset global stats in case we come from a previous run
       playerHealth = 3;
       playerKeys = 0;
       playerPowerUp = null;
@@ -167,30 +161,20 @@ class ForestLevel extends Phaser.Scene {
   create() {
     this.gameOverTriggered = false;
     this.nextLevelTriggered = false;
-
     this.physics.world.setBounds(0, 0, GAME_WIDTH * 2, GAME_HEIGHT);
-    // Sky background color
     this.add.rectangle(this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height, 0x87ceeb);
-
-    // Platforms (tinted brown #654321)
     this.platforms = this.physics.add.staticGroup();
-    // example: we place a few
     let ground1 = this.platforms.create(400, 568, 'platform').setScale(2,1).refreshBody();
     ground1.setTint(0x654321);
     let ground2 = this.platforms.create(1200, 568, 'platform').setScale(2,1).refreshBody();
     ground2.setTint(0x654321);
-
     let floatingPlat = this.platforms.create(600, 400, 'platform');
     floatingPlat.setTint(0x654321);
     floatingPlat.refreshBody();
-
-    // Player
     this.player = this.physics.add.sprite(100, 450, 'player');
     this.player.setBounce(0.2);
     this.player.setCollideWorldBounds(true);
     this.physics.add.collider(this.player, this.platforms);
-
-    // Enemies group (tinted green #00FF00 for basic)
     this.enemies = this.physics.add.group();
     let enemy = this.enemies.create(500, 500, 'enemy');
     enemy.setTint(0x00ff00);
@@ -198,54 +182,37 @@ class ForestLevel extends Phaser.Scene {
     enemy.setBounce(1);
     enemy.setCollideWorldBounds(true);
     this.physics.add.collider(this.enemies, this.platforms);
-
-    // Overlap with player -> damage or stomp logic
     this.physics.add.overlap(this.player, this.enemies, this.hitEnemy, null, this);
-
-    // Obstacles (spikes tinted #FF4500)
     this.obstacles = this.physics.add.group();
     let spike1 = this.obstacles.create(700, 535, 'spike');
     spike1.setTint(0xff4500);
     spike1.setImmovable(true);
     spike1.body.allowGravity = false;
-
     this.physics.add.collider(this.obstacles, this.platforms);
     this.physics.add.overlap(this.player, this.obstacles, this.hitObstacle, null, this);
-
-    // A speed power-up tinted #0000FF
     this.powerUps = this.physics.add.group();
     let speedPower = this.powerUps.create(300, 400, 'power');
     speedPower.setTint(0x0000ff);
     speedPower.body.allowGravity = false;
     this.physics.add.overlap(this.player, speedPower, this.pickupPowerUp, null, this);
-
-    // A key tinted #FFFF00
     this.keysGroup = this.physics.add.group();
     let forestKey = this.keysGroup.create(600, 350, 'key');
     forestKey.setTint(0xffff00);
     forestKey.body.allowGravity = false;
     this.physics.add.overlap(this.player, forestKey, this.pickupKey, null, this);
-
-    // Door tinted #8B4513
     this.door = this.physics.add.sprite(1500, 550, 'door');
     this.door.setTint(0x8b4513);
     this.door.setImmovable(true);
     this.door.body.allowGravity = false;
     this.physics.add.collider(this.door, this.platforms);
     this.physics.add.overlap(this.player, this.door, this.nextLevel, null, this);
-
-    // Camera
     this.cameras.main.setBounds(0, 0, GAME_WIDTH * 2, GAME_HEIGHT);
     this.cameras.main.startFollow(this.player);
-
-    // Input
     this.cursors = this.input.keyboard.createCursorKeys();
     this.input.on('pointerdown', (pointer) => {
       this.touchStartY = pointer.y;
       this.jumpTriggered = false;
     });
-
-    // Mobile controls
     if (this.sys.game.device.os.iOS || this.sys.game.device.os.android) {
       addMobileControls(this);
       this.scale.on('resize', () => {
@@ -253,14 +220,10 @@ class ForestLevel extends Phaser.Scene {
         addMobileControls(this);
       });
     }
-
-    // HUD
     this.healthText = this.add.text(10, 10, '', { fontSize: '20px', fill: '#fff' }).setScrollFactor(0);
     this.updateHUD();
   }
-
   update() {
-    // Normal or mobile movement
     let usedMobile = false;
     if (this.mobileControls) {
       if (this.mobileControls.left) {
@@ -278,12 +241,11 @@ class ForestLevel extends Phaser.Scene {
         usedMobile = true;
       }
     }
-
     if (!usedMobile) {
-      // If pointer is down, treat as drag control
       if (this.input.activePointer.isDown) {
         let pointer = this.input.activePointer;
-        let dx = pointer.x - this.player.x;
+        // Use pointer.worldX so we compare world coordinates
+        let dx = pointer.worldX - this.player.x;
         let factor = 0.1;
         let vx = Phaser.Math.Clamp(dx * factor, -300, 300);
         this.player.setVelocityX(vx);
@@ -292,8 +254,6 @@ class ForestLevel extends Phaser.Scene {
           this.jumpTriggered = true;
         }
       } else {
-        // fallback to arrow keys
-        // If we have a jump powerUp, we might set jumpVelocity to -400
         let jumpVelocity = (playerPowerUp === 'jump') ? -400 : -330;
         let speed = (playerPowerUp === 'speed') ? 250 : 160;
         moveEntity(this.player, this.cursors, jumpVelocity, speed);
@@ -301,29 +261,22 @@ class ForestLevel extends Phaser.Scene {
     }
     this.updateHUD();
   }
-
-  // Stomp logic or damage
   hitEnemy(player, enemy) {
     if (player.body.velocity.y > 0 && player.y < enemy.y) {
-      // Stomp
       enemy.disableBody(true, true);
       player.setVelocityY(-200);
       if (navigator.vibrate) navigator.vibrate(50);
     } else if (!this.gameOverTriggered) {
-      // Damage the player
       playerHealth--;
       if (playerHealth <= 0) {
         this.gameOverTriggered = true;
         this.scene.start('GameOver');
       } else {
-        // Minor knockback or reset position
         player.setX(100);
         player.setY(450);
       }
     }
   }
-
-  // Spikes/obstacles damage
   hitObstacle(player, obstacle) {
     if (!this.gameOverTriggered) {
       playerHealth--;
@@ -331,43 +284,30 @@ class ForestLevel extends Phaser.Scene {
         this.gameOverTriggered = true;
         this.scene.start('GameOver');
       } else {
-        // Minor knockback or reset
         player.setX(100);
         player.setY(450);
       }
     }
   }
-
-  // Collect key
   pickupKey(player, keySprite) {
     keySprite.disableBody(true, true);
     playerKeys++;
   }
-
-  // Collect power-up
   pickupPowerUp(player, powerSprite) {
     powerSprite.disableBody(true, true);
-    // Decide which power up to give
-    // For simplicity, let's assume it's a "speed" power up
     playerPowerUp = 'speed';
-    // Clear any existing timer
     if (powerUpTimer) this.time.removeEvent(powerUpTimer);
-
-    // Reset after 5s
     powerUpTimer = this.time.delayedCall(powerUpDuration, () => {
       playerPowerUp = null;
     });
   }
-
   nextLevel() {
-    // Door requires at least 1 key
     if (!this.nextLevelTriggered && playerKeys > 0) {
       this.nextLevelTriggered = true;
-      playerKeys--;  // use one key
+      playerKeys--;
       this.scene.start('DungeonLevel');
     }
   }
-
   updateHUD() {
     this.healthText.setText(`Health: ${playerHealth}  Keys: ${playerKeys}`);
   }
@@ -381,12 +321,8 @@ class DungeonLevel extends Phaser.Scene {
   create() {
     this.gameOverTriggered = false;
     this.nextLevelTriggered = false;
-
     this.physics.world.setBounds(0, 0, GAME_WIDTH * 2, GAME_HEIGHT);
-    // Dungeon background color
     this.add.rectangle(this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height, 0x4b0082);
-
-    // Platforms (brown tint)
     this.platforms = this.physics.add.staticGroup();
     let p1 = this.platforms.create(400, 568, 'platform').refreshBody();
     p1.setTint(0x654321);
@@ -395,21 +331,15 @@ class DungeonLevel extends Phaser.Scene {
     this.platforms.create(200, 400, 'platform').setTint(0x654321).refreshBody();
     this.platforms.create(600, 300, 'platform').setTint(0x654321).refreshBody();
     this.platforms.create(400, 275, 'platform').setTint(0x654321).refreshBody();
-
-    // Player
     this.player = this.physics.add.sprite(100, 450, 'player');
     this.player.setBounce(0.2);
     this.player.setCollideWorldBounds(true);
     this.physics.add.collider(this.player, this.platforms);
-
-    // A jump power-up tinted #00FFFF
     this.powerUps = this.physics.add.group();
     let jumpPower = this.powerUps.create(250, 250, 'power');
     jumpPower.setTint(0x00ffff);
     jumpPower.body.allowGravity = false;
     this.physics.add.overlap(this.player, jumpPower, this.pickupPowerUp, null, this);
-
-    // Key
     this.hasKey = false;
     let dungeonKey = this.physics.add.sprite(500, 200, 'key');
     dungeonKey.setTint(0xffff00);
@@ -419,8 +349,6 @@ class DungeonLevel extends Phaser.Scene {
       dungeonKey.disableBody(true, true);
       this.hasKey = true;
     }, null, this);
-
-    // Enemies
     this.enemies = this.physics.add.group();
     let enemy = this.enemies.create(300, 500, 'enemy');
     enemy.setTint(0x00ff00);
@@ -429,16 +357,12 @@ class DungeonLevel extends Phaser.Scene {
     enemy.setCollideWorldBounds(true);
     this.physics.add.collider(this.enemies, this.platforms);
     this.physics.add.overlap(this.player, enemy, this.hitEnemy, null, this);
-
-    // Spikes
     this.obstacles = this.physics.add.group();
     let spike1 = this.obstacles.create(350, 535, 'spike');
     spike1.setTint(0xff4500);
     spike1.setImmovable(true);
     spike1.body.allowGravity = false;
     this.physics.add.overlap(this.player, spike1, this.hitObstacle, null, this);
-
-    // Door
     let door = this.physics.add.sprite(1500, 550, 'door');
     door.setTint(0x8b4513);
     door.setImmovable(true);
@@ -451,19 +375,13 @@ class DungeonLevel extends Phaser.Scene {
         this.scene.start('CityLevel');
       }
     }, null, this);
-
-    // Camera
     this.cameras.main.setBounds(0, 0, GAME_WIDTH * 2, GAME_HEIGHT);
     this.cameras.main.startFollow(this.player);
-
-    // Input
     this.cursors = this.input.keyboard.createCursorKeys();
     this.input.on('pointerdown', (pointer) => {
       this.touchStartY = pointer.y;
       this.jumpTriggered = false;
     });
-
-    // Mobile
     if (this.sys.game.device.os.iOS || this.sys.game.device.os.android) {
       addMobileControls(this);
       this.scale.on('resize', () => {
@@ -471,12 +389,9 @@ class DungeonLevel extends Phaser.Scene {
         addMobileControls(this);
       });
     }
-
-    // HUD
     this.healthText = this.add.text(10, 10, '', { fontSize: '20px', fill: '#fff' }).setScrollFactor(0);
     this.updateHUD();
   }
-
   update() {
     let usedMobile = false;
     if (this.mobileControls) {
@@ -495,11 +410,10 @@ class DungeonLevel extends Phaser.Scene {
         usedMobile = true;
       }
     }
-
     if (!usedMobile) {
       if (this.input.activePointer.isDown) {
         let pointer = this.input.activePointer;
-        let dx = pointer.x - this.player.x;
+        let dx = pointer.worldX - this.player.x;
         let factor = 0.1;
         let vx = Phaser.Math.Clamp(dx * factor, -300, 300);
         this.player.setVelocityX(vx);
@@ -515,17 +429,14 @@ class DungeonLevel extends Phaser.Scene {
     }
     this.updateHUD();
   }
-
   pickupPowerUp(player, powerSprite) {
     powerSprite.disableBody(true, true);
-    // This level's power-up is 'jump'
     playerPowerUp = 'jump';
     if (powerUpTimer) this.time.removeEvent(powerUpTimer);
     powerUpTimer = this.time.delayedCall(powerUpDuration, () => {
       playerPowerUp = null;
     });
   }
-
   hitEnemy(player, enemy) {
     if (player.body.velocity.y > 0 && player.y < enemy.y) {
       enemy.disableBody(true, true);
@@ -542,20 +453,15 @@ class DungeonLevel extends Phaser.Scene {
       }
     }
   }
-
   hitObstacle(player, spike) {
-    if (!this.gameOverTriggered) {
-      playerHealth--;
-      if (playerHealth <= 0) {
-        this.gameOverTriggered = true;
-        this.scene.start('GameOver');
-      } else {
-        player.setX(100);
-        player.setY(450);
-      }
+    playerHealth--;
+    if (playerHealth <= 0) {
+      this.scene.start('GameOver');
+    } else {
+      player.setX(100);
+      player.setY(450);
     }
   }
-
   updateHUD() {
     this.healthText.setText(`Health: ${playerHealth}  Keys: ${playerKeys}`);
   }
@@ -568,10 +474,7 @@ class CityLevel extends Phaser.Scene {
   }
   create() {
     this.physics.world.setBounds(0, 0, GAME_WIDTH * 2, GAME_HEIGHT);
-    // Gray city background
     this.add.rectangle(this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height, 0x808080);
-
-    // Platforms
     this.platforms = this.physics.add.staticGroup();
     let plat1 = this.platforms.create(400, 568, 'platform').refreshBody();
     plat1.setTint(0x654321);
@@ -579,21 +482,15 @@ class CityLevel extends Phaser.Scene {
     plat2.setTint(0x654321);
     this.platforms.create(800, 400, 'platform').setTint(0x654321).refreshBody();
     this.platforms.create(1200, 300, 'platform').setTint(0x654321).refreshBody();
-
-    // Player
     this.player = this.physics.add.sprite(100, 450, 'player');
     this.player.setBounce(0.2);
     this.player.setCollideWorldBounds(true);
     this.physics.add.collider(this.player, this.platforms);
-
-    // Boss tinted #800080
     this.boss = this.physics.add.sprite(1400, 550, 'boss');
     this.boss.setTint(0x800080);
     this.boss.setImmovable(true);
     this.boss.body.allowGravity = false;
     this.physics.add.collider(this.boss, this.platforms);
-
-    // Overlap with boss => “win” scenario
     this.bossDefeated = false;
     this.physics.add.overlap(this.player, this.boss, () => {
       if (!this.bossDefeated) {
@@ -603,50 +500,36 @@ class CityLevel extends Phaser.Scene {
         this.add.text(this.scale.width / 2, this.scale.height / 2, 'You Win!', { fontSize: '48px', color: '#000' })
           .setOrigin(0.5)
           .setScrollFactor(0);
-        // Return to main menu after 2 seconds
         this.time.delayedCall(2000, () => this.scene.start('MainMenu'));
       }
     }, null, this);
-
-    // Bike logic remains as is
     this.bike = this.physics.add.sprite(250, 450, 'bike');
     this.bike.body.setSize(this.bike.width, this.bike.height);
     this.bike.setCollideWorldBounds(true);
     this.physics.add.collider(this.bike, this.platforms);
-
-    // Overlap with boss if on bike => remove the bike
     this.isOnBike = false;
     this.physics.add.overlap(this.bike, this.boss, () => {
       if (this.isOnBike && this.bike) {
         this.bike.disableBody(true, true);
         this.bike = null;
         this.isOnBike = false;
-        // Re-enable the player
         this.player.enableBody(true, GAME_WIDTH, 450, true, true);
         if (navigator.vibrate) navigator.vibrate(200);
       }
     }, null, this);
-
-    // Obstacles
     this.obstacles = this.physics.add.group();
     let spike1 = this.obstacles.create(600, 535, 'spike');
     spike1.setTint(0xff4500);
     spike1.setImmovable(true);
     spike1.body.allowGravity = false;
     this.physics.add.overlap(this.player, spike1, this.hitObstacle, null, this);
-
-    // Camera
     this.cameras.main.setBounds(0, 0, GAME_WIDTH * 2, GAME_HEIGHT);
     this.cameras.main.startFollow(this.player);
-
-    // Input
     this.cursors = this.input.keyboard.createCursorKeys();
     this.input.on('pointerdown', (pointer) => {
       this.touchStartY = pointer.y;
       this.jumpTriggered = false;
     });
-
-    // Mobile
     if (this.sys.game.device.os.iOS || this.sys.game.device.os.android) {
       addMobileControls(this);
       this.scale.on('resize', () => {
@@ -654,15 +537,11 @@ class CityLevel extends Phaser.Scene {
         addMobileControls(this);
       });
     }
-
-    // HUD
     this.healthText = this.add.text(10, 10, '', { fontSize: '20px', fill: '#fff' }).setScrollFactor(0);
     this.updateHUD();
   }
-
   update() {
     if (this.isOnBike) {
-      // Bike controls
       if (this.cursors.left.isDown) {
         this.bike.setVelocityX(-300);
       } else if (this.cursors.right.isDown) {
@@ -695,7 +574,7 @@ class CityLevel extends Phaser.Scene {
       if (!usedMobile) {
         if (this.input.activePointer.isDown) {
           let pointer = this.input.activePointer;
-          let dx = pointer.x - this.player.x;
+          let dx = pointer.worldX - this.player.x;
           let factor = 0.1;
           let vx = Phaser.Math.Clamp(dx * factor, -300, 300);
           this.player.setVelocityX(vx);
@@ -709,7 +588,6 @@ class CityLevel extends Phaser.Scene {
           moveEntity(this.player, this.cursors, jumpVelocity, speed);
         }
       }
-      // Switch to bike if close
       if (!this.isOnBike && this.bike && Phaser.Math.Distance.Between(this.player.x, this.player.y, this.bike.x, this.bike.y) < 50) {
         this.isOnBike = true;
         this.player.disableBody(true, true);
@@ -718,7 +596,6 @@ class CityLevel extends Phaser.Scene {
     }
     this.updateHUD();
   }
-
   hitObstacle(player, obstacle) {
     playerHealth--;
     if (playerHealth <= 0) {
@@ -728,7 +605,6 @@ class CityLevel extends Phaser.Scene {
       player.setY(450);
     }
   }
-
   updateHUD() {
     this.healthText.setText(`Health: ${playerHealth}  Keys: ${playerKeys}`);
   }
@@ -744,7 +620,6 @@ class GameOver extends Phaser.Scene {
     this.add.text(this.scale.width / 2, this.scale.height / 2, 'Game Over', { fontSize: '32px', color: '#fff' })
       .setOrigin(0.5);
     this.input.on('pointerdown', () => {
-      // Reset stats if you want
       playerHealth = 3;
       playerKeys = 0;
       playerPowerUp = null;

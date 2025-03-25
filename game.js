@@ -195,7 +195,7 @@ class ForestLevel extends Phaser.Scene {
     // Set player speed slightly slower than enemy (enemy moves at 80, so player = 70).
     this.playerSpeed = 70;
     this.player = this.physics.add.sprite(100, 450, 'player');
-    this.player.setBounce(0.2);
+    this.player.setBounce(0.3);
     this.player.setCollideWorldBounds(true);
     this.physics.add.collider(this.player, this.platforms);
 
